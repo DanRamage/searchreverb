@@ -1,0 +1,28 @@
+{% extends 'admin/base.html' %}
+{% block head_css %}
+    {{ super() }}
+    <style>
+        .navbar {
+            border-color: #019ced;
+            border-width: 1px;
+            border-radius: 0;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+            border-top: none;
+            box-shadow: none;
+        }
+    </style>
+{% endblock %}
+
+{% block access_control %}
+{% if current_user.is_authenticated %}
+<div class="btn-group pull-right">
+    <a class="btn btn-light dropdown-toggle" data-toggle="dropdown" href="#">
+        <i class="icon-user"></i> {{ current_user.login }} <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+        <li><a href="{{ url_for('admin.logout_view') }}">Log out</a></li>
+    </ul>
+</div>
+{% endif %}
+{% endblock %}
