@@ -246,7 +246,7 @@ def output_results(app, results, user, search_rec, email_results):
         email_obj.rcpt_to([user.email])
         #email_obj.message(template_output)
         email_obj.attach(out_file)
-        #email_obj.message("See attachment for results.")
+        email_obj.message("See attachment for results.")
         email_obj.subject("Reverb Search Results")
         email_obj.send(content_type="html", charset="UTF-8")
     except Exception as e:
