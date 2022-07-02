@@ -19,7 +19,7 @@ class reverb_base:
                'Accept': 'application/hal+json',
                'Accept-Version': '3.0'}
     self._logger.debug("Request params: %s" % (payload))
-    req = requests.get(url, headers=headers, params=payload)
+    req = requests.get(url, headers=headers, params=payload, timeout=15)
     return req
 
 class reverb_api(reverb_base):
@@ -34,7 +34,7 @@ class reverb_api(reverb_base):
     listings = []
     try:
       url = "%s/%s" % (self._base_url, "listings/all")
-      results = self.get(url=url, **kwargs, timeout=30)
+      results = self.get(url=url, **kwargs)
       if results.status_code == 200:
         results = results.json()
         #json_results.append(results)
