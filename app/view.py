@@ -289,9 +289,11 @@ class RolesView(base_view):
 
 # Create customized model view class
 class UserModelView(sqla.ModelView):
-    can_create = False
-    can_delete = False
+    #can_create = False
+    #can_delete = False
 
+
+    '''
     @property
     def _list_columns(self):
         return self.get_list_columns()
@@ -323,14 +325,14 @@ class UserModelView(sqla.ModelView):
             if not has_app_context() or not current_user.has_role('admin'):
                 return ['email', 'first_name', 'last_name' ]
 
-
+    '''
 
     def is_accessible(self):
-        if current_user.is_authenticated:
+        if current_user.is_active and current_user.is_authenticated and current_user.has_role('admin'):
           return True
         return False
         '''
-        if current_user.is_active and current_user.is_authenticated and current_user.has_role('admin'):
+        if current_user.is_authenticated:
           return True
         return False
         '''
