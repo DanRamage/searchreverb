@@ -15,7 +15,7 @@ class SearchItem(db.Model):
   row_entry_date = db.Column(db.String(32))
   row_update_date = db.Column(db.String(32))
   last_email_date = db.Column(db.String(32))
-  search_item = db.Column(db.Text, unique=True)
+  search_item = db.Column(db.Text)
   max_price = db.Column(db.Float)
   min_price = db.Column(db.Float)
   category = db.Column(db.String())
