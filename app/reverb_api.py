@@ -18,7 +18,7 @@ class reverb_base:
                'Content-Type': 'application/hal+json',
                'Accept': 'application/hal+json',
                'Accept-Version': '3.0'}
-    self._logger.debug("Request params: %s" % (payload))
+    self._logger.debug("URL: %s Request params: %s" % (url, payload))
     try:
       req = requests.get(url, headers=headers, params=payload, timeout=15)
     except Exception as e:
