@@ -202,6 +202,7 @@ def run_searches(params):
         listings = search_obj.search_listings(**query_params)
         #Sort
         sorted_listings = sorted(listings, key=lambda item: float(item['price']['amount']))
+        current_app.logger.debug("Sorted list of: %d results" % (len(sorted_listings)))
 
         if len(sorted_listings):
           results_to_report = process_results(user, search_rec, sorted_listings)
