@@ -1,4 +1,4 @@
-from flask import request, redirect, render_template, current_app, url_for, flash
+from flask import request, redirect, render_template, current_app, url_for, flash, has_app_context
 from flask.views import View, MethodView
 import flask_admin as admin
 import flask_login as login
@@ -299,11 +299,27 @@ class UserModelView(sqla.ModelView):
 
     @property
     def column_list(self):
-        if current_user.has_role('admin'):
-            return ['id', 'row_entry_date', 'row_update_date', 'last_login_date',
-                    'login', 'email', 'first_name', 'last_name', 'active', 'password', 'roles' ]
-        else:
-            return ['last_login_date', 'login', 'email', 'first_name', 'last_name' ]
+        if current_user is not None:
+            if not has_app_context() or current_user.has_role('admin'):
+                return ['id', 'row_entry_date', 'row_update_date', 'last_login_date',
+                        'login', 'email', 'first_name', 'last_name', 'active', 'password', 'roles' ]
+            else:
+                return ['last_login_date', 'login', 'email', 'first_name', 'last_name' ]
+
+    @property
+    def _form_columns(self):
+        return self.get_form_columns()
+
+    @_form_columns.setter
+    def _form_columns(self, value):
+        pass
+
+    @property
+    def form_columns(self):
+        if current_user is not None:
+            if not has_app_context() or current_user.has_role('search_user'):
+                return ['email', 'first_name', 'last_name' ]
+
 
 
     def is_accessible(self):
