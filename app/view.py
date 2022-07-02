@@ -289,6 +289,9 @@ class RolesView(base_view):
 
 # Create customized model view class
 class UserModelView(sqla.ModelView):
+    can_create = False
+    can_delete = False
+
     @property
     def _list_columns(self):
         return self.get_list_columns()
@@ -316,8 +319,8 @@ class UserModelView(sqla.ModelView):
 
     @property
     def form_columns(self):
-        if current_user is not None:
-            if not has_app_context() or current_user.has_role('search_user'):
+        if current_user != None:
+            if not has_app_context() or not current_user.has_role('admin'):
                 return ['email', 'first_name', 'last_name' ]
 
 
