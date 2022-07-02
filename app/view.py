@@ -299,7 +299,7 @@ class UserModelView(sqla.ModelView):
 
     @property
     def column_list(self):
-        if not has_app_context() or current_user.has_role('admin'):
+        if current_user.has_role('admin'):
             return ['id', 'row_entry_date', 'row_update_date', 'last_login_date',
                     'login', 'email', 'first_name', 'last_name', 'active', 'password', 'roles' ]
         else:
