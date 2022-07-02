@@ -188,7 +188,7 @@ def run_searches(params):
                           'price_max': search_rec.max_price,
                       }
         if search_rec.min_price is not None:
-          query_params['min_price'] = search_rec.min_price
+          query_params['price_min'] = search_rec.min_price
 
         #Split the category value apart in an attempt to better filter results.
         #On Add Item screen we create the full category hierarchy using the category and subcategory slugs.
