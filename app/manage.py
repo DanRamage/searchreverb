@@ -178,6 +178,8 @@ def run_searches(params):
     init_logging(app)
 
     users = db.session.query(User).all()
+    search_obj = reverb_api(oauth_token=OAUTH_TOKEN)
+
     for user in users:
       search_recs = db.session.query(SearchItem)\
         .filter(SearchItem.user_id == user.id)\
@@ -198,7 +200,6 @@ def run_searches(params):
           query_params['product_type'] = product_type.strip()
 
         current_app.logger.debug("Running query for Email: %s Query params: %s" % (user.email, query_params))
-        search_obj = reverb_api(oauth_token=OAUTH_TOKEN)
         listings = search_obj.search_listings(**query_params)
         #Sort
         sorted_listings = sorted(listings, key=lambda item: float(item['price']['amount']))
