@@ -5,10 +5,10 @@ import time
 from datetime import datetime
 
 class reverb_base:
-  def __init__(self, url, oauth_token):
+  def __init__(self, url, oauth_token, logger):
     self._base_url = url
     self._oauth_token = oauth_token
-    self._logger = logging.getLogger()
+    self._logger = logger
   def get(self, url, **kwargs):
     payload = {}
     for key in kwargs:
@@ -19,12 +19,15 @@ class reverb_base:
                'Accept': 'application/hal+json',
                'Accept-Version': '3.0'}
     self._logger.debug("Request params: %s" % (payload))
-    req = requests.get(url, headers=headers, params=payload, timeout=15)
+    try:
+      req = requests.get(url, headers=headers, params=payload, timeout=15)
+    except Exception as e:
+      self._logger.exception(e)
     return req
 
 class reverb_api(reverb_base):
-  def __init__(self, oauth_token, url="https://api.reverb.com/api"):
-    super().__init__(url, oauth_token)
+  def __init__(self, oauth_token, logger, url="https://api.reverb.com/api"):
+    super().__init__(url, oauth_token, logger)
     self.item_results = []
     self.run_time = datetime.utcnow()
 

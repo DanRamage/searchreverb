@@ -178,7 +178,7 @@ def run_searches(params):
     init_logging(app)
 
     users = db.session.query(User).all()
-    search_obj = reverb_api(oauth_token=OAUTH_TOKEN)
+    search_obj = reverb_api(oauth_token=OAUTH_TOKEN, logger=current_app.logger)
 
     for user in users:
       search_recs = db.session.query(SearchItem)\
