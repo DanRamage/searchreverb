@@ -34,7 +34,7 @@ class reverb_api(reverb_base):
     listings = []
     try:
       url = "%s/%s" % (self._base_url, "listings/all")
-      results = self.get(url=url, **kwargs)
+      results = self.get(url=url, **kwargs, timeout=30)
       if results.status_code == 200:
         results = results.json()
         #json_results.append(results)
