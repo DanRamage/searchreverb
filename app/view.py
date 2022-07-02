@@ -289,17 +289,33 @@ class RolesView(base_view):
 
 # Create customized model view class
 class UserModelView(sqla.ModelView):
+    @property
+    def _list_columns(self):
+        return self.get_list_columns()
 
-  def is_accessible(self):
-    if current_user.is_authenticated:
-      return True
-    return False
-    '''
-    if current_user.is_active and current_user.is_authenticated and current_user.has_role('admin'):
-      return True
-    return False
-    '''
-  def get_query(self):
+    @_list_columns.setter
+    def _list_columns(self, value):
+        pass
+
+    @property
+    def column_list(self):
+        if not has_app_context() or current_user.has_role('admin'):
+            return ['id', 'row_entry_date', 'row_update_date', 'last_login_date',
+                    'login', 'email', 'first_name', 'last_name', 'active', 'password', 'roles' ]
+        else:
+            return ['last_login_date', 'login', 'email', 'first_name', 'last_name' ]
+
+
+    def is_accessible(self):
+        if current_user.is_authenticated:
+          return True
+        return False
+        '''
+        if current_user.is_active and current_user.is_authenticated and current_user.has_role('admin'):
+          return True
+        return False
+        '''
+    def get_query(self):
       if current_user.is_active and current_user.is_authenticated:
           #Admin user cana see all user accounts, otherwise you just get your user info.
           if current_user.has_role('admin'):
@@ -307,7 +323,7 @@ class UserModelView(sqla.ModelView):
           else:
               return self.session.query(self.model).filter(self.model.login == current_user.login)
 
-  def get_count_query(self):
+    def get_count_query(self):
       cnt = 0
       if current_user.is_active and current_user.is_authenticated:
           #Admin user cana see all user accounts, otherwise you just get your user info.
