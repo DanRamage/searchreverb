@@ -163,7 +163,9 @@ def process_results(user_rec, search_rec, listings):
               .delete()
           db.session.commit()
         except Exception as e:
+          db.session.rollback()
           current_app.logger.exception(e)
+
   except Exception as e:
     current_app.logger.exception(e)
   return results_to_report
