@@ -46,7 +46,12 @@ class reverb_api(reverb_base):
           next_url = results['_links']['next']['href']
           self._logger.debug("Next url: %s" % (next_url))
           paginate = True
+          last_page = None
           while paginate:
+              if last_page == next_url:
+                self._logger.error("Last Page is the same as the current page, exiting.")
+                paginate = False
+
               next_req = self.get(url=next_url)
               if next_req.status_code == 200:
                 next_results = next_req.json()
@@ -56,6 +61,7 @@ class reverb_api(reverb_base):
                   next_url = next_results['_links']['next']['href']
                 else:
                   paginate = False
+                last_page = next_url
 
     except Exception as e:
       self._logger.exception(e)
