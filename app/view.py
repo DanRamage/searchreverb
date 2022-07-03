@@ -52,7 +52,7 @@ class ItemSearchPageView(BaseView):
 
         current_app.logger.debug('dispatch_request started')
         try:
-            reverb_req = reverb_api(oauth_token=OAUTH_TOKEN)
+            reverb_req = reverb_api(oauth_token=OAUTH_TOKEN, logger=current_app.logger)
             json_results = reverb_req.categories()
             rendered_template = self.render('search_page.html', categories=json_results['categories'])
 
