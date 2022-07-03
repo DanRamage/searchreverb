@@ -147,6 +147,9 @@ def process_results(user_rec, search_rec, listings):
         except IntegrityError as e:
           current_app.logger.exception(e)
           db.session.rollback()
+        except Exception as e:
+          current_app.logger.exception(e)
+          db.session.rollback()
 
     else:
       current_app.logger.debug("No new results for user: %s search: %s(%d)" %\
