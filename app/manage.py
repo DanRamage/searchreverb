@@ -59,6 +59,20 @@ def database_maintenance(params):
     db.session.close()
   except Exception as e:
     current_app.logger.exception(e)
+  #Now let's cleanup the temp directory.
+  results_tmp_dir = os.path.join(app.root_path, RESULTS_TEMP_DIRECTORY)
+
+  current_app.logger.debug("Cleaning up files older than: %d seconds" % (RESULTS_TEMP_AGE_OUT))
+  for tmp_file in os.listdir(results_tmp_dir):
+    try:
+      tmp_file_path = os.path.join(results_tmp_dir, tmp_file)
+      if os.stat(tmp_file_path).st_mtime < start_time - RESULTS_TEMP_AGE_OUT:
+        if os.path.isfile(tmp_file_path):
+          current_app.logger.debug("File: %s is older than cutoff, deleting." % (tmp_file_path))
+          os.remove(tmp_file_path)
+    except Exception as e:
+      current_app.logger.error("Error when testing file: %s for deletion." % (tmp_file_path))
+      current_app.logger.exception(e)
   current_app.logger.debug("database_maintenance completed in %f seconds." % (time.time()-start_time))
   return
 
