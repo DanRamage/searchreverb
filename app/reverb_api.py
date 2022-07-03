@@ -44,6 +44,7 @@ class reverb_api(reverb_base):
         listings.extend(results['listings'])
         if 'next' in results['_links']:
           next_url = results['_links']['next']['href']
+          self._logger("Next url: %s" % (next_url))
           paginate = True
           while paginate:
               next_req = self.get(url=next_url)
