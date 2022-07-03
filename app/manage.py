@@ -48,6 +48,20 @@ def init_logging(app):
 
   return
 
+@app.cli.command('database_maintenance')
+@click.option('--params', nargs=0)
+def database_maintenance(params):
+  start_time = time.time()
+  init_logging(app)
+  current_app.logger.debug("database_maintenance started.")
+  try:
+    db.session.execute("VACUUM;")
+    db.session.close()
+  except Exception as e:
+    current_app.logger.exception(e)
+  current_app.logger.debug("database_maintenance completed in %f seconds." % (time.time()-start_time))
+  return
+
 
 @app.cli.command('create_roles')
 @click.option('--params', nargs=2)
@@ -67,6 +81,8 @@ def create_roles(params):
       db.session.commit()
     except Exception as e:
       current_app.logger.exception(e)
+  db.session.close()
+
   return
 
 
@@ -219,6 +235,8 @@ def run_searches(params):
 
   except Exception as e:
     current_app.logger.exception(e)
+
+  db.session.close()
 
   current_app.logger.debug("Finished run_searches in %f seconds" % (time.time()-start_time))
 
