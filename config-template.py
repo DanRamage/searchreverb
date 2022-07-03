@@ -34,6 +34,7 @@ EMAIL_PORT=465
 EMAIL_USE_TLS=True
 
 RESULTS_TEMP_DIRECTORY="results_temp/"
-
+#This is in seconds.
+RESULTS_TEMP_AGE_OUT = 14400
 
 
