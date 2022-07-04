@@ -44,11 +44,12 @@ class reverb_api(reverb_base):
       if results.status_code == 200:
         stop_at_page = None
         results = results.json()
-        total_pages = results['total']
-        if total_pages > self._results_limit:
-          self._logger.warning("Query has: %d results, our limit is: %d" % (total_pages, self._results_limit))
+        total_listings = results['total']
+        total_pages = results['total_pages']
+        if total_listings > self._results_limit:
+          self._logger.warning("Query has: %d results, our limit is: %d" % (total_listings, self._results_limit))
         else:
-          self._logger.warning("Query has: %d results." % (total_pages))
+          self._logger.debug("Query has: %d results." % (total_listings))
 
         listings.extend(results['listings'])
         if 'next' in results['_links']:
