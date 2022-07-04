@@ -3,6 +3,7 @@ import logging.config
 
 import time
 from datetime import datetime
+from urllib.parse import urlparse, urlencode
 
 class reverb_base:
   def __init__(self, url, oauth_token, logger):
@@ -26,10 +27,12 @@ class reverb_base:
     return req
 
 class reverb_api(reverb_base):
-  def __init__(self, oauth_token, logger, url="https://api.reverb.com/api"):
+  def __init__(self, oauth_token, logger, results_limit=100, url="https://api.reverb.com/api"):
     super().__init__(url, oauth_token, logger)
     self.item_results = []
     self.run_time = datetime.utcnow()
+    #This is the number of results we will limit ourselves to.
+    self._results_limit = results_limit
 
 
   def search_listings(self, **kwargs):
@@ -39,29 +42,38 @@ class reverb_api(reverb_base):
       url = "%s/%s" % (self._base_url, "listings/all")
       results = self.get(url=url, **kwargs)
       if results.status_code == 200:
+        stop_at_page = None
         results = results.json()
-        #json_results.append(results)
+        total_pages = results['total']
+        if total_pages > self._results_limit:
+          self._logger.warning("Query has: %d results, our limit is: %d" % (total_pages, self._results_limit))
+        else:
+          self._logger.warning("Query has: %d results." % (total_pages))
+
         listings.extend(results['listings'])
         if 'next' in results['_links']:
+          current_page = 1
           next_url = results['_links']['next']['href']
           self._logger.debug("Next url: %s" % (next_url))
-          paginate = True
-          last_page = None
-          while paginate:
-              if last_page == next_url:
-                self._logger.error("Last Page is the same as the current page, exiting.")
-                paginate = False
+          # We want to limit our queries, so let's not return anymore than N results.
+          url_parts = urlparse(next_url)
+          query_parts = dict(param.split('=') for param in url_parts.query.split('&'))
+          #Based on the results returned per query and the current page, we will limit our results.
+          stop_at_page = int(self._results_limit / int(query_parts['per_page']))
 
+          paginate = True
+          while paginate:
+              if (stop_at_page and current_page >= stop_at_page) or (current_page == total_pages):
+                paginate = False
+              current_page += 1
               next_req = self.get(url=next_url)
               if next_req.status_code == 200:
                 next_results = next_req.json()
-                #json_results.append(next_results)
                 listings.extend(next_results['listings'])
                 if 'next' in next_results['_links']:
                   next_url = next_results['_links']['next']['href']
                 else:
                   paginate = False
-                last_page = next_url
 
     except Exception as e:
       self._logger.exception(e)
