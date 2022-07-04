@@ -63,6 +63,8 @@ class reverb_api(reverb_base):
 
           paginate = True
           while paginate:
+              #Make sure we just don't endlessly query, so we check to see if we've hit our limit on
+              #total number of listings to return, or we've hit the total_pages from the initial result.
               if (stop_at_page and current_page >= stop_at_page) or (current_page == total_pages):
                 paginate = False
               current_page += 1
