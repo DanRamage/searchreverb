@@ -245,8 +245,11 @@ def run_searches(params):
           #I may at some point have all the search results put into one file, so for now
           #pass the results_to_report as a list.
           if len(results_to_report):
-            output_results(current_app, [results_to_report], user, search_rec, email_results)
-
+            search_results.append((search_rec, results_to_report))
+          #if len(results_to_report):
+          #  output_results(current_app, [results_to_report], user, search_rec, email_results)
+      if len(search_results):
+        output_results(current_app, search_results, user, email_results)
   except Exception as e:
     current_app.logger.exception(e)
 
@@ -256,49 +259,57 @@ def run_searches(params):
 
   return
 
-def output_results(app, results, user, search_rec, email_results):
-  try:
+def output_results(app, search_results, user, email_results):
+#def output_results(app, results, user, search_rec, email_results):
     run_time = datetime.now()
-    template_path = os.path.join(app.root_path, EMAIL_TEMPLATE)
-    email_template = Template(filename=template_path)
-    template_output = email_template.render(user=user.email,
-                                            search_rec=search_rec,
-                                            search_results=results,
-                                            search_execute_time=run_time.strftime('%Y-%m-%d %H:%M'))
-  except:
-    app.logger.exception(makoExceptions.text_error_template().render())
-  else:
-    try:
-      filename = "%d_results_%s" % (user.id, run_time.strftime('%Y-%m-%d_%H_%M'))
-      out_file = os.path.join(app.root_path, "%s/%s.html" % (RESULTS_TEMP_DIRECTORY, filename))
-      with open(out_file, "w") as file_obj:
-        app.logger.debug("Saving results file: %s" % (out_file))
-        file_obj.write(template_output)
-      if email_results:
-        app.logger.debug("Emailing user: %s" % (user.email))
-        email_obj = smtpClass(host=EMAIL_HOST,
-                              user=EMAIL_USER,
-                              password=EMAIL_PWD,
-                              port=EMAIL_PORT,
-                              use_tls=EMAIL_USE_TLS)
-        email_obj.from_addr("%s@%s" % (EMAIL_USER, EMAIL_HOST))
-        email_obj.rcpt_to([user.email])
-        #email_obj.message(template_output)
-        email_obj.attach(out_file)
-        email_obj.message("See attachment for results.")
-        email_obj.subject("Reverb Search Results")
-        email_obj.send(content_type="html", charset="UTF-8")
-
-    except Exception as e:
-      app.logger.exception(e)
-    else:
-      #If we succeeded in sending the email, let's update the last_email_date.
+    file_attach_list = []
+    for search_rec, results in search_results:
       try:
-        search_rec.last_email_date = run_time.strftime('%Y-%m-%dT%H:%M:%S')
-        db.session.commit()
-      except Exception as e:
-        db.session.rollback()
-        current_app.logger.error("Error attempting to update the last_email_date for search item: %d" % (search_rec.id))
-        current_app.logger.exception(e)
+        template_path = os.path.join(app.root_path, EMAIL_TEMPLATE)
+        email_template = Template(filename=template_path)
+        template_output = email_template.render(user=user.email,
+                                                search_rec=search_rec,
+                                                search_results=[results],
+                                                search_execute_time=run_time.strftime('%Y-%m-%d %H:%M'))
+      except:
+        app.logger.exception(makoExceptions.text_error_template().render())
+      else:
+        try:
+          filename = "%d_%d_results_%s" % (user.id, search_rec.id, run_time.strftime('%Y-%m-%d_%H_%M'))
+          out_file = os.path.join(app.root_path, "%s/%s.html" % (RESULTS_TEMP_DIRECTORY, filename))
+          with open(out_file, "w") as file_obj:
+            app.logger.debug("Saving results file: %s" % (out_file))
+            file_obj.write(template_output)
+            file_attach_list.append(out_file)
+        except Exception as e:
+          current_app.logger.exception(e)
+    if email_results and len(file_attach_list):
+        try:
+          app.logger.debug("Emailing user: %s" % (user.email))
+          email_obj = smtpClass(host=EMAIL_HOST,
+                                user=EMAIL_USER,
+                                password=EMAIL_PWD,
+                                port=EMAIL_PORT,
+                                use_tls=EMAIL_USE_TLS)
+          email_obj.from_addr("%s@%s" % (EMAIL_USER, EMAIL_HOST))
+          email_obj.rcpt_to([user.email])
+          #email_obj.message(template_output)
+          for file_to_attach in file_attach_list:
+            email_obj.attach(file_to_attach)
+          email_obj.message("See attachment for results.")
+          email_obj.subject("Reverb Search Results")
+          email_obj.send(content_type="html", charset="UTF-8")
 
-  return
+        except Exception as e:
+          app.logger.exception(e)
+        else:
+          #If we succeeded in sending the email, let's update the last_email_date.
+          try:
+            search_rec.last_email_date = run_time.strftime('%Y-%m-%dT%H:%M:%S')
+            db.session.commit()
+          except Exception as e:
+            db.session.rollback()
+            current_app.logger.error("Error attempting to update the last_email_date for search item: %d" % (search_rec.id))
+            current_app.logger.exception(e)
+
+    return
