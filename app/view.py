@@ -433,7 +433,7 @@ class MyAdminIndexView(admin.AdminIndexView):
 
 class SearchItemView(sqla.ModelView):
   #form_excluded_columns = ('user', 'row_entry_date', 'row_update_date')
-  column_list = ['row_entry_date', 'search_item', 'category', 'max_price', 'min_price', 'show_new_results_only']
+  column_list = ['row_entry_date', 'last_email_date', 'search_item', 'category', 'max_price', 'min_price', 'show_new_results_only']
   form_columns = ['search_item', 'category', 'max_price', 'min_price', 'show_new_results_only']
   can_create = False
 

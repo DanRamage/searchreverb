@@ -288,7 +288,17 @@ def output_results(app, results, user, search_rec, email_results):
         email_obj.message("See attachment for results.")
         email_obj.subject("Reverb Search Results")
         email_obj.send(content_type="html", charset="UTF-8")
+
     except Exception as e:
       app.logger.exception(e)
+    else:
+      #If we succeeded in sending the email, let's update the last_email_date.
+      try:
+        search_rec.last_email_date = run_time.strftime('%Y-%m-%dT%H:%M:%S')
+        db.session.commit()
+      except Exception as e:
+        db.session.rollback()
+        current_app.logger.error("Error attempting to update the last_email_date for search item: %d" % (search_rec.id))
+        current_app.logger.exception(e)
 
   return
