@@ -147,9 +147,11 @@ def process_results(user_rec, search_rec, listings):
       # no longer available.
       current_search_set.add(listing['id'])
       # Let's also check to see if there are any price drops, if so we'll add them to the results.
+      '''
       if 'original_price' in listing:
         if listing['original_price']['amount'] != listing['price']['amount']:
           price_drops.append(listing)
+      '''
     if len(prev_search_results):
       #Create a set of the local cache of last search results
       for search_result in prev_search_results:
@@ -162,8 +164,8 @@ def process_results(user_rec, search_rec, listings):
       results_to_report = listings
 
     # If we have any price drops, let's add them.
-    if len(price_drops):
-      new_results.extend(price_drops)
+    #if len(price_drops):
+    #  new_results.extend(price_drops)
 
     #We save the new results to the database.
     if len(new_results):
