@@ -141,47 +141,89 @@ def process_results(user_rec, search_rec, listings):
 
     current_search_set = set()
     prev_search_set = set()
-    price_drops = []
+    price_change_listings = []
+
     for listing in listings:
       # Create a set of the current results. We'll use set operations to figure out what's new and then what's
       # no longer available.
       current_search_set.add(listing['id'])
-      # Let's also check to see if there are any price drops, if so we'll add them to the results.
-      '''
-      if 'original_price' in listing:
-        if listing['original_price']['amount'] != listing['price']['amount']:
-          price_drops.append(listing)
-      '''
+
     if len(prev_search_results):
+      row_entry_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
       #Create a set of the local cache of last search results
-      for search_result in prev_search_results:
-        prev_search_set.add(search_result.search_item_id)
+      for prev_search_result in prev_search_results:
+        prev_search_set.add(prev_search_result.search_item_id)
+
+        # Let's also check to see if there are any price changes, if so we'll add them to the results.
+        try:
+          listing = next((listing for listing in listings if prev_search_result.search_item_id == listing['id']), None)
+          if listing:
+            if float(listing['price']['amount']) != prev_search_result.last_price:
+              current_app.logger.debug("Price change detected for item: %d From: %s to %s" %
+                                       (prev_search_result.search_item_id, str(prev_search_result.last_price),
+                                        str(listing['price']['amount'])))
+              price_change_listings.append(listing)
+              # Update the database record with the new current price.
+              try:
+
+                prev_search_result.row_update_date = row_entry_date
+                prev_search_result.last_price = float(listing['price']['amount'])
+                db.session.commit()
+              except Exception as e:
+                db.session.rollback()
+                current_app.logger.error("Error updating the search record: %d price." % (search_rec.id))
+                current_app.logger.exception(e)
+
+          '''
+          for listing in listings:
+            if listing['id'] == search_result.search_item_id:
+              if float(listing['price']['amount']) != search_result.last_price:
+                current_app.logger.debug("Price change detected for item: %d From: %s to %s" %
+                                         (search_result.search_item_id,str(search_result.last_price),str(listing['price']['amount'])))
+                price_change_listings.append(listing)
+                #Update the database record with the new current price.
+
+                try:
+                  search_rec.last_price = float(listing['price']['amount'])
+                  db.session.commit()
+                except Exception as e:
+                  db.session.rollback()
+                  current_app.logger.error("Error updating the search record: %d price." % (search_rec.id))
+                  current_app.logger.exception(e)
+              break
+            '''
+        except Exception as e:
+          current_app.logger.exception(e)
+
     #Now let's figure out what's new.
     new_results = current_search_set.difference(prev_search_set)
 
     #IF we are sending all results, set the results_to_report to the listings.
     if not search_rec.show_new_results_only:
       results_to_report = listings
-
-    # If we have any price drops, let's add them.
-    #if len(price_drops):
-    #  new_results.extend(price_drops)
+    else:
+      #If we are showing only new results, populate results_to_report with the ids we just received that
+      #aren't stored from a previous results query.
+      results_to_report = ([listing for listing in listings if listing['id'] in new_results])
+      # If we have any price changes, we want to add them to our results_to_report. We add them only when
+      # we are showing new results only since they would already be included if we are sending all results.
+      if (price_change_listings):
+        results_to_report.extend(price_change_listings)
 
     #We save the new results to the database.
     if len(new_results):
-      #If we are showing only new results, populate results_to_report with the ids we just received that
-      #aren't stored from a previous results query.
-      if search_rec.show_new_results_only:
-        results_to_report = ([listing for listing in listings if listing['id'] in new_results])
-
       row_entry_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
       for new_result_id in new_results:
         try:
           current_app.logger.debug("New results %d for user: %s search: %s(%d)" % \
                                    (new_result_id, user_rec.email, search_rec.search_item, search_rec.id))
+          #Find the list record based on id so we can get the price.
+          listing_rec = next(listing for listing in listings if new_result_id == listing['id'])
           new_result = SearchResults(row_entry_date=row_entry_date,
                                      search_item_id=new_result_id,
-                                     search_id=search_rec.id)
+                                     search_id=search_rec.id,
+                                     last_price=float(listing_rec['price']['amount'])
+                                     )
           db.session.add(new_result)
           db.session.commit()
         except IntegrityError as e:
@@ -194,6 +236,7 @@ def process_results(user_rec, search_rec, listings):
     else:
       current_app.logger.debug("No new results for user: %s search: %s(%d)" %\
                                (user_rec.email, search_rec.search_item, search_rec.id))
+
     #Now figure out if old listings have been removed and clean up our table.
     deleted_search_results = prev_search_set.difference(current_search_set)
     if len(deleted_search_results):
@@ -211,6 +254,7 @@ def process_results(user_rec, search_rec, listings):
 
   except Exception as e:
     current_app.logger.exception(e)
+
   return results_to_report
 
 @app.cli.command('run_searches')

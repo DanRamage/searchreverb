@@ -55,6 +55,7 @@ class SearchResults(db.Model):
   row_update_date = db.Column(db.String(32))
 
   search_item_id = db.Column(db.Integer)
+  last_price = db.Column(db.Float)
 
   search_id = db.Column(db.Integer, db.ForeignKey('user_search_item.id'))
   user = db.relationship('SearchItem', backref='search_results')
