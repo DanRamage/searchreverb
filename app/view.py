@@ -122,8 +122,8 @@ class AddSearchItem(MethodView):
     if 'new_results_only' in request.form:
         new_results_only = int(request.form['new_results_only'])
     row_entry_date = datetime.now()
-    current_app.logger.debug('AddSearchItem: Email: %s Search Item: %s Max Price: %s Min Price: %s Category: %s'\
-                             % (current_user.email, search_item, max_price, min_price, full_category))
+    current_app.logger.debug('IP: %s AddSearchItem: Email: %s Search Item: %s Max Price: %s Min Price: %s Category: %s'\
+                             % (request.remote_addr, current_user.email, search_item, max_price, min_price, full_category))
     search_item = SearchItem(
         row_entry_date=row_entry_date.strftime("%Y-%m-%d %H:%M:%S"),
         search_item=search_item,
@@ -296,7 +296,6 @@ class UserModelView(sqla.ModelView):
     #can_delete = False
 
 
-    '''
     @property
     def _list_columns(self):
         return self.get_list_columns()
@@ -310,7 +309,7 @@ class UserModelView(sqla.ModelView):
         if current_user is not None:
             if not has_app_context() or current_user.has_role('admin'):
                 return ['id', 'row_entry_date', 'row_update_date', 'last_login_date',
-                        'login', 'email', 'first_name', 'last_name', 'active', 'password', 'roles' ]
+                        'login', 'email', 'roles', 'first_name', 'last_name', 'active']
             else:
                 return ['last_login_date', 'login', 'email', 'first_name', 'last_name' ]
 
@@ -328,7 +327,6 @@ class UserModelView(sqla.ModelView):
             if not has_app_context() or not current_user.has_role('admin'):
                 return ['email', 'first_name', 'last_name' ]
 
-    '''
 
     def is_accessible(self):
         if current_user.is_active and current_user.is_authenticated and current_user.has_role('admin'):
@@ -366,7 +364,7 @@ class MyAdminIndexView(admin.AdminIndexView):
     def index(self):
         current_app.logger.debug("IP: %s Admin index page" % (request.remote_addr))
         if not login.current_user.is_authenticated:
-          current_app.logger.debug("User: %s is not authenticated" % (login.current_user))
+          current_app.logger.debug("IP: %s User: %s is not authenticated" % (request.remote_addr, login.current_user))
           return redirect(url_for('.login_view'))
         return super(MyAdminIndexView, self).index()
 
@@ -481,7 +479,7 @@ class SearchItemView(sqla.ModelView):
 
   def delete_model(self, model):
       #Let's clean out the search results table since this search is getting deleted.
-      current_app.logger.debug("Deleting search: %s(%d)" % (model.search_item, model.id))
+      current_app.logger.debug("IP: %s Deleting search: %s(%d)" % (request.remote_addr, model.search_item, model.id))
       search_results_deleted = -1
       try:
           recs = self.session.query(SearchResults)\
