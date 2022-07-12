@@ -277,8 +277,11 @@ class BasicUserModelView(AdminUserModelView):
 
 class RolesView(base_view):
 
+
   def is_accessible(self):
-    return login.current_user.is_authenticated
+      if current_user.is_active and current_user.is_authenticated and current_user.has_role('admin'):
+          return True
+      return False
 
   """
   View into the user Roles table.
@@ -433,9 +436,25 @@ class MyAdminIndexView(admin.AdminIndexView):
 
 class SearchItemView(sqla.ModelView):
   #form_excluded_columns = ('user', 'row_entry_date', 'row_update_date')
-  column_list = ['row_entry_date', 'last_email_date', 'search_item', 'category', 'max_price', 'min_price', 'show_new_results_only']
   form_columns = ['search_item', 'category', 'max_price', 'min_price', 'show_new_results_only']
   can_create = False
+
+  @property
+  def _list_columns(self):
+      return self.get_list_columns()
+  @_list_columns.setter
+  def _list_columns(self, value):
+    pass
+  @property
+  def column_list(self):
+      if login.current_user and login.current_user.is_authenticated:
+          if not current_user.has_role('admin'):
+              column_list = ['row_entry_date', 'last_email_date', 'search_item', 'category', 'max_price', 'min_price',
+                             'show_new_results_only']
+          else:
+              column_list = ['user.login', 'row_entry_date', 'last_email_date', 'search_item', 'category', 'max_price', 'min_price',
+                             'show_new_results_only']
+          return column_list
 
   def is_accessible(self):
     return login.current_user.is_authenticated
@@ -497,18 +516,22 @@ class SearchItemView(sqla.ModelView):
     return
   """
   def get_query(self):
-    """
-     def get_query(self):
-          return super(MyView, self).get_query().filter(User.username == current_user.username)
-    """
-    return super(SearchItemView, self).get_query().filter(SearchItem.user_id == login.current_user.id)
-  """
+    if not current_user.has_role('admin'):
+        return super(SearchItemView, self).get_query().filter(SearchItem.user_id == login.current_user.id)
+    else:
+        return super(SearchItemView, self).get_query()
+
   def get_count_query(self):
-    return self.session.query(func.count('*')).\
-      select_from(self.model).\
-      join(self.model.id == User.id).\
-      filter(self.model.id == User.id)
-  """
+      cnt = ""
+      if current_user.is_active and current_user.is_authenticated:
+          #Admin user cana see all user accounts, otherwise you just get your user info.
+          if not current_user.has_role('admin'):
+              cnt = self.session.query(func.count('*')).filter(SearchItem.user_id == login.current_user.id)
+          else:
+              cnt = super().get_count_query()
+      return cnt
+
+
 class reverb_categories_rest(BaseAPI):
     def __init__(self):
         self._base_url = "https://api.reverb.com/api/categories"
