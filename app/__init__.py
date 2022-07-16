@@ -65,10 +65,11 @@ def build_flask_admin(app, login_manager):
     ItemSearchPageView, \
     AdminUserModelView, \
     BasicUserModelView,\
-    RolesView
+    RolesView, \
+    SearchResultsView
 
   from .admin_models import User, Role
-  from .reverb_models import SearchItem
+  from .reverb_models import SearchItem, SearchResults
 
   login_manager.init_app(app)
   # Create admin
@@ -88,6 +89,7 @@ def build_flask_admin(app, login_manager):
   admin.add_view(UserModelView(User, db.session))
   admin.add_view(SearchItemView(SearchItem, db.session,name='Current Search Items'))
   admin.add_view(ItemSearchPageView(name='Add Reverb Search Item', endpoint='reverbitemsearch'))
+  admin.add_view(SearchResultsView(SearchResults, db.session, name='Current Search Item Results', endpoint='reverbitemsearchresults'))
   return admin
 
 def build_url_rules(app):

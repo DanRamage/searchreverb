@@ -529,6 +529,12 @@ class SearchItemView(sqla.ModelView):
               cnt = super().get_count_query()
       return cnt
 
+class SearchResultsView(sqla.ModelView):
+    column_list = ['row_entry_date', 'row_update_date', 'search_item.search_item', 'search_item_id', 'last_price']
+    def is_accessible(self):
+      if current_user.is_active and current_user.is_authenticated and current_user.has_role('admin'):
+          return True
+      return False
 
 class reverb_categories_rest(BaseAPI):
     def __init__(self):
