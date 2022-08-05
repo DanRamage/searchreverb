@@ -30,6 +30,13 @@
             {% endfor %}
         </select>
     </div>
+      <div class="form-group">
+      <label for="item_region">Country Code (2 letter code)</label>
+      <div class="input-group">
+        <input required name="item_region" type="text" class="form-control" id="item_region" placeholder="">
+      </div>
+    </div>
+
     <div class="form-group">
       <label for="max_price_point">Max Price (in dollars)</label>
       <div class="input-group">
@@ -79,7 +86,6 @@
       }, false);
     })();
     $(document).ready(function() {
-        console.log("Here.");
         var form = $("#add_item_form");
         form.submit(function () {
 

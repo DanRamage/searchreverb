@@ -121,12 +121,16 @@ class AddSearchItem(MethodView):
     new_results_only = False
     if 'new_results_only' in request.form:
         new_results_only = int(request.form['new_results_only'])
+    item_region = None
+    if 'item_region' in request.form:
+        item_region = request.form['item_region']
     row_entry_date = datetime.now()
-    current_app.logger.debug('IP: %s AddSearchItem: Email: %s Search Item: %s Max Price: %s Min Price: %s Category: %s'\
-                             % (request.remote_addr, current_user.email, search_item, max_price, min_price, full_category))
+    current_app.logger.debug('IP: %s AddSearchItem: Email: %s Search Item: %s Country Code: %s Max Price: %s Min Price: %s Category: %s'\
+                             % (request.remote_addr, current_user.email, search_item, item_region, max_price, min_price, full_category))
     search_item = SearchItem(
         row_entry_date=row_entry_date.strftime("%Y-%m-%d %H:%M:%S"),
         search_item=search_item,
+        item_region=item_region,
         category=full_category,
         max_price=max_price,
         min_price=min_price,
@@ -434,7 +438,7 @@ class MyAdminIndexView(admin.AdminIndexView):
 
 class SearchItemView(sqla.ModelView):
   #form_excluded_columns = ('user', 'row_entry_date', 'row_update_date')
-  form_columns = ['search_item', 'category', 'max_price', 'min_price', 'show_new_results_only']
+  form_columns = ['search_item', 'category', 'item_region', 'max_price', 'min_price', 'show_new_results_only']
   can_create = False
 
   @property
@@ -447,10 +451,10 @@ class SearchItemView(sqla.ModelView):
   def column_list(self):
       if login.current_user and login.current_user.is_authenticated:
           if not current_user.has_role('admin'):
-              column_list = ['row_entry_date', 'last_email_date', 'search_item', 'category', 'max_price', 'min_price',
+              column_list = ['row_entry_date', 'last_email_date', 'search_item', 'category', 'item_region', 'max_price', 'min_price',
                              'show_new_results_only']
           else:
-              column_list = ['user.login', 'row_entry_date', 'last_email_date', 'search_item', 'category', 'max_price', 'min_price',
+              column_list = ['user.login', 'row_entry_date', 'last_email_date', 'search_item', 'category', 'item_region', 'max_price', 'min_price',
                              'show_new_results_only']
           return column_list
 

@@ -280,6 +280,8 @@ def run_searches(params):
                       }
         if search_rec.min_price is not None:
           query_params['price_min'] = search_rec.min_price
+        if search_rec.item_region is not None:
+          query_params['item_region'] = search_rec.item_region
 
         #Split the category value apart in an attempt to better filter results.
         #On Add Item screen we create the full category hierarchy using the category and subcategory slugs.
