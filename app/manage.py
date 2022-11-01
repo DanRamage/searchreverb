@@ -6,9 +6,8 @@ export FLASK_APP=<fullpathto>/manage.py
 import sys
 sys.path.append('../commonfiles/python')
 import os
-import os
 import click
-from flask import Flask, current_app, redirect, url_for, request
+from flask import Flask, current_app
 import logging.config
 from logging.handlers import RotatingFileHandler
 from logging import Formatter
@@ -16,19 +15,15 @@ import time
 from app import db
 from config import *
 from datetime import datetime
-from shapely.wkb import loads as wkb_loads
-import json
-import requests
-from shapely.geometry import Point, Polygon, box
 from werkzeug.security import generate_password_hash, check_password_hash
 from mako.template import Template
 from mako import exceptions as makoExceptions
 from sqlalchemy.exc import IntegrityError
-
 from smtp_utils import smtpClass
 from .reverb_models import SearchItem, SearchResults
 from .admin_models import Role, User, Roles_Users
 from .reverb_api import reverb_api
+from .gc_api import guitarcenter_api
 app = Flask(__name__)
 db.app = app
 db.init_app(app)
@@ -313,6 +308,38 @@ def run_searches(params):
 
   current_app.logger.debug("Finished run_searches in %f seconds" % (time.time()-start_time))
 
+  return
+
+@app.cli.command('run_gc_searches')
+@click.option('--params', nargs=1)
+def run_gc_searches(params):
+  start_time = time.time()
+  try:
+    email_results = int(params)
+    init_logging(app)
+
+    users = db.session.query(User).all()
+    search_obj = guitarcenter_api()
+
+    for user in users:
+      search_recs = db.session.query(SearchItem)\
+        .filter(SearchItem.user_id == user.id)\
+        .all()
+      search_results = []
+      for search_rec in search_recs:
+        query_params = { 'query': search_rec.search_item,
+                          'price_max': search_rec.max_price,
+                      }
+        if search_rec.min_price is not None:
+          query_params['price_min'] = search_rec.min_price
+        if search_rec.item_region is not None:
+          query_params['item_region'] = search_rec.item_region
+        current_app.logger.debug("Running query for Email: %s Query params: %s" % (user.email, query_params))
+
+        search_obj.search_used(search_rec.search_item, search_rec.min_price, search_rec.max_price)
+
+  except Exception as e:
+    app.logger.exception(e)
   return
 
 def output_results(app, search_results, user, email_results):

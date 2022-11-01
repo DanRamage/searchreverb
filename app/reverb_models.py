@@ -43,3 +43,17 @@ class SearchResults(db.Model):
 
   search_id = db.Column(db.Integer, db.ForeignKey('user_search_item.id'))
   search_item = db.relationship('SearchItem', backref='search_results')
+
+'''
+class GCSearchResults(db.Model):
+  __tablename__ = 'gc_search_results'
+  id = db.Column(db.Integer, primary_key=True)
+  row_entry_date = db.Column(db.String(32))
+  row_update_date = db.Column(db.String(32))
+
+  search_item_id = db.Column(db.Integer)
+  last_price = db.Column(db.Float)
+
+  search_id = db.Column(db.Integer, db.ForeignKey('user_search_item.id'))
+  search_item = db.relationship('SearchItem', backref='search_results')
+'''
