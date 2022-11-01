@@ -4,6 +4,32 @@ import logging.config
 import time
 from datetime import datetime
 from urllib.parse import urlparse, urlencode
+from .results import listing, listings
+
+class reverb_listing(listing):
+  def __init__(self, **kwargs):
+    try:
+      reverb_rec = kwargs['reverb_rec']
+      site_id = kwargs.get('site_id')
+
+      self._id = reverb_rec['id']
+      self._price = listing['price']['amount']
+      self._listing_description = listing['title']
+      self._condition = listing['condition']['display_name']
+      self._link = listing['_links']['web']['href']
+      self._search_site_id = site_id
+      self._currency = listing['price']['currency']
+
+    except Exception as e:
+      raise e
+
+class reverb_listings(listings):
+  def parse(self, **kwargs):
+    listings = kwargs.get('listings', None)
+    if listings:
+      for listing in listings:
+        reverb_rec = reverb_listing(reverb_rec=listing)
+        self._listings.append(reverb_rec)
 
 class reverb_base:
   def __init__(self, url, oauth_token, logger):
@@ -81,6 +107,10 @@ class reverb_api(reverb_base):
     except Exception as e:
       self._logger.exception(e)
     self._logger.debug("search finished in %f seconds" % (time.time() - start_search))
+
+    normalized_listings = reverb_listings()
+    normalized_listings.parse(listings)
+
     return listings
 
   def categories(self):

@@ -360,8 +360,8 @@ def run_gc_searches(params):
 
           if len(results_to_report):
             search_results.append((search_rec, results_to_report))
-        #if len(search_results):
-        #  output_normalized_results(current_app, search_results, user, email_results)
+        if len(search_results):
+          output_normalized_results(current_app, search_results, user, email_results)
 
 
   except Exception as e:
@@ -540,7 +540,7 @@ def output_normalized_results(app, search_results, user, email_results):
     file_attach_list = []
     for search_rec, results in search_results:
       try:
-        template_path = os.path.join(app.root_path, EMAIL_TEMPLATE)
+        template_path = os.path.join(app.root_path, EMAIL_TEMPLATE_NORMALIZED)
         email_template = Template(filename=template_path)
         template_output = email_template.render(user=user.email,
                                                 search_rec=search_rec,

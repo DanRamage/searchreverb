@@ -24,8 +24,7 @@ class gc_listing(listing):
                 raise e
 
 class gc_listings(listings):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def parse(self, **kwargs):
         soup = kwargs.get('soup', None)
         site_id = kwargs.get('site_id', -1)
         if soup:
@@ -104,6 +103,12 @@ class guitarcenter_api:
     '''
     def get_price_ids(self, min_value, max_value):
         price_ids = []
+        #No min value, we'll set it to 0.
+        if min_value is None:
+            min_value = 0
+        #No max value, let's set it really high.
+        if max_value is None:
+            max_value = 1000000
         for price in self._min_prices:
             if price >= min_value and price < max_value:
                 price_ids.append(str(self._min_prices[price]))
@@ -128,7 +133,8 @@ class guitarcenter_api:
                 )
                 self._driver.get(url_template)
                 soup = BeautifulSoup(self._driver.page_source, 'html.parser')
-                listings = gc_listings(soup=soup, site_id=site_id)
+                listings = gc_listings()
+                listings.parse(soup=soup, site_id=site_id)
             except Exception as e:
                 logger.exception(e)
         return(listings)

@@ -6,6 +6,7 @@ class listing:
         self._link = None
         self._condition = None
         self._search_site_id = None
+        self._currency = ""
 
     @property
     def id(self):
@@ -25,10 +26,16 @@ class listing:
     @property
     def search_site_id(self):
         return self._search_site_id
+    @property
+    def currency(self):
+        return self._currency
 
 class listings:
-    def __init__(self, **kwargs):
+    def __init__(self):
         self._listings = []
+
+    def parse(self, **kwargs):
+        return
 
     def __iter__(self):
         return iter(self._listings)
