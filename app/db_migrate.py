@@ -63,6 +63,26 @@ class SearchResults(db.Model):
   user = db.relationship('SearchItem', backref='search_results')
 
 
+class SearchSite(db.Model):
+  __tablename__ = 'search_site'
+  id = db.Column(db.Integer, primary_key=True)
+  row_entry_date = db.Column(db.String(32))
+  row_update_date = db.Column(db.String(32))
+
+  site_name = db.Column(db.String(64))
+
+class NormalizedSearchResults(db.Model):
+  __tablename__ = 'normalized_search_results'
+  id = db.Column(db.Integer, primary_key=True)
+  row_entry_date = db.Column(db.String(32))
+  row_update_date = db.Column(db.String(32))
+
+  search_item_id = db.Column(db.Integer)
+  last_price = db.Column(db.Float)
+
+  search_site_id = db.Column(db.Integer, db.ForeignKey('search_site.id'))
+  search_id = db.Column(db.Integer, db.ForeignKey('user_search_item.id'))
+  search_item = db.relationship('SearchItem', backref='normalized_search_results')
 
 
 

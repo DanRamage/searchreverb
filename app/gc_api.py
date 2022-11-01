@@ -4,30 +4,44 @@ import logging.config
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
+from .results import listing, listings
 
-class gc_listing:
-    def __init__(self, product):
-        self._id = None
-        self._price = None
-        self._link = None
-        try:
-            self._id = product.find('var', class_="hidden productId").text
-            self._price = float(product.find('div', class_='priceContainer mainPrice').findChildren('span', class_="productPrice")[0].contents[-1])
-            link_tag = product.find('div', class_="product").find('div', class_="thumb").find('a', class_="quickView").attrs['href']
-            self._link = "{main_url}{href}".format(main_url="https://www.guitarcenter.com", href=link_tag)
-        except Exception as e:
-            self._id = None
-            self._price = None
-class gc_listings:
-    def __init__(self, soup):
-        self._listings = []
-        product_container = soup.find("div", {"id": "resultsContent"})
-        if product_container:
-            product_list = product_container.find("ol")
-            products = product_list.findChildren('li')
-            for product in products:
-                listing = gc_listing(product)
-                self._listings.append(listing)
+class gc_listing(listing):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        product = kwargs.get('product', None)
+        site_id = kwargs.get('site_id')
+        if product:
+            try:
+                self._search_site_id = site_id
+                self._id = int(product.find('var', class_="hidden displayId").text)
+                self._listing_description = str(product.find('div', class_="productTitle").text).strip()
+                self._price = float(product.find('div', class_='priceContainer mainPrice').findChildren('span', class_="productPrice")[0].contents[-1])
+                self._condition = str(product.find('div', class_='productCondition').text)
+                link_tag = product.find('div', class_="product").find('div', class_="thumb").find('a', class_="quickView").attrs['href']
+                self._link = "{main_url}{href}".format(main_url="https://www.guitarcenter.com", href=link_tag)
+            except Exception as e:
+                raise e
+
+class gc_listings(listings):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        soup = kwargs.get('soup', None)
+        site_id = kwargs.get('site_id', -1)
+        if soup:
+            product_container = soup.find("div", {"id": "resultsContent"})
+            if product_container:
+                product_list = product_container.find("ol")
+                products = product_list.findChildren('li')
+                for product in products:
+                    try:
+                        listing = gc_listing(product=product, site_id=site_id)
+                        self._listings.append(listing)
+                    except Exception as e:
+                        logger.exception(e)
+                if len(self._listings):
+                    self._listings.sort(key=lambda item: item.price)
+
 
 
 logger = logging.getLogger()
@@ -84,8 +98,9 @@ class guitarcenter_api:
             except Exception as e:
                 logger.exception(e)
     '''
-    The guitar center search does pass the actual monetary values, it uses the value attribute of the items
-    in the <select> drop down.
+    The guitar center search does not pass the actual monetary values, it uses the value attribute of the items
+    in the <select> drop down. This function takes the min/max values from the search and gets the appropriate
+    IDs to use in the GET.
     '''
     def get_price_ids(self, min_value, max_value):
         price_ids = []
@@ -95,7 +110,7 @@ class guitarcenter_api:
         return price_ids
 
 
-    def search_used(self, search_term, min_value, max_value, filter_options=None):
+    def search_used(self, search_term, min_value, max_value, site_id, filter_options=None):
         self.initialize()
         listings = []
         if self._driver:
@@ -113,7 +128,7 @@ class guitarcenter_api:
                 )
                 self._driver.get(url_template)
                 soup = BeautifulSoup(self._driver.page_source, 'html.parser')
-                listings = gc_listings(soup)
+                listings = gc_listings(soup=soup, site_id=site_id)
             except Exception as e:
                 logger.exception(e)
         return(listings)
