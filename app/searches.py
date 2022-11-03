@@ -204,7 +204,7 @@ class searches:
           for new_result_id,search_site_id in new_results:
             try:
               current_app.logger.debug("%s new results %d for user: %s search: %s(%d)" % \
-                                       (search_site_id.site_name,
+                                       (search_site.site_name,
                                         new_result_id,
                                         user_rec.email,
                                         search_rec.search_item,

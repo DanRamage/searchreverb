@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-import requests
+from flask import current_app
 import logging.config
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
@@ -37,7 +37,7 @@ class gc_listings(listings):
                         listing = gc_listing(product=product, site_id=site_id)
                         self._listings.append(listing)
                     except Exception as e:
-                        logger.exception(e)
+                        current_app.logger.exception(e)
                 if len(self._listings):
                     self._listings.sort(key=lambda item: item.price)
 
@@ -95,7 +95,7 @@ class guitarcenter_api:
                 #    logger.error("Unable to GET the url: {url} Code: {code}".format(url=self._base_used_url,
                 #                                                                    code=req.status_code))
             except Exception as e:
-                logger.exception(e)
+                current_app.logger.exception(e)
     '''
     The guitar center search does not pass the actual monetary values, it uses the value attribute of the items
     in the <select> drop down. This function takes the min/max values from the search and gets the appropriate
@@ -135,8 +135,9 @@ class guitarcenter_api:
                 soup = BeautifulSoup(self._driver.page_source, 'html.parser')
                 listings = gc_listings()
                 listings.parse(soup=soup, site_id=site_id)
+                current_app.logger.debug("Query has: {rec_cnt} results.".format(rec_cnt=len(listings)))
             except Exception as e:
-                logger.exception(e)
+                current_app.logger.exception(e)
         return(listings)
 
 def main():
