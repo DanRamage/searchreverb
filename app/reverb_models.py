@@ -62,5 +62,6 @@ class NormalizedSearchResults(db.Model):
   last_price = db.Column(db.Float)
 
   search_site_id = db.Column(db.Integer, db.ForeignKey('search_site.id'))
+  search_site = db.relationship('SearchSite', backref='normalized_search_results')
   search_id = db.Column(db.Integer, db.ForeignKey('user_search_item.id'))
   search_item = db.relationship('SearchItem', backref='normalized_search_results')
