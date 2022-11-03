@@ -66,7 +66,7 @@ class searches:
                                                 .format(site_name=site_rec.site_name,
                                                         time=time.time()-query_start_time))
                         if len(listings):
-                            results_to_report = self.process_normalized_results(user, search_rec, listings)
+                            results_to_report = self.process_normalized_results(user, search_rec, listings, site_rec)
                             # I may at some point have all the search results put into one file, so for now
                             # pass the results_to_report as a list.
                             if len(results_to_report):
@@ -126,23 +126,19 @@ class searches:
                                               search_rec.min_price,
                                               search_rec.max_price,
                                               site_id)
-            '''
-            if len(listings):
-                results_to_report = self.process_normalized_results(user, search_rec, listings)
-                if len(results_to_report):
-                    search_results.append((search_rec, results_to_report))
-            '''
         except Exception as e:
             current_app.logger.exception(e)
 
         return(listings)
 
-    def process_normalized_results(self, user_rec, search_rec, listings):
+    def process_normalized_results(self, user_rec, search_rec, listings, search_site):
       try:
         results_to_report = []
+
         #Figure out if we have new results, so we query the database then do some set operations.
         prev_search_results = db.session.query(NormalizedSearchResults)\
                     .filter(NormalizedSearchResults.search_id == search_rec.id)\
+                    .filter(NormalizedSearchResults.search_site_id == search_site.id)\
                     .all()
 
         current_search_set = set()
@@ -152,21 +148,23 @@ class searches:
         for listing in listings:
           # Create a set of the current results. We'll use set operations to figure out what's new and then what's
           # no longer available.
-          current_search_set.add(listing.id)
+          current_search_set.add((listing.id,listing.search_site_id))
 
         if len(prev_search_results):
           row_entry_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
           #Create a set of the local cache of last search results
           for prev_search_result in prev_search_results:
-            prev_search_set.add(prev_search_result.search_item_id)
+            prev_search_set.add((prev_search_result.search_item_id, prev_search_result.search_site_id))
 
             # Let's also check to see if there are any price changes, if so we'll add them to the results.
             try:
               listing = next((listing for listing in listings if prev_search_result.search_item_id == listing.id), None)
               if listing:
                 if listing.price != prev_search_result.last_price:
-                  current_app.logger.debug("Price change detected for item: %d From: %s to %s" %
-                                           (prev_search_result.search_item_id, str(prev_search_result.last_price),
+                  current_app.logger.debug("%s price change detected for item: %d From: %s to %s" %
+                                           (search_site.site_name,
+                                            prev_search_result.search_item_id,
+                                            str(prev_search_result.last_price),
                                             str(listing.price)))
                   price_change_listings.append(listing)
                   # Update the database record with the new current price.
@@ -177,7 +175,9 @@ class searches:
                     db.session.commit()
                   except Exception as e:
                     db.session.rollback()
-                    current_app.logger.error("Error updating the search record: %d price." % (search_rec.id))
+                    current_app.logger.error("%s(%d) error updating the search record: %d Site: %d price."\
+                                             % (search_site.site_name, search_site.id,
+                                                search_rec.id, search_rec.search_site_id))
                     current_app.logger.exception(e)
 
             except Exception as e:
@@ -192,7 +192,7 @@ class searches:
         else:
           #If we are showing only new results, populate results_to_report with the ids we just received that
           #aren't stored from a previous results query.
-          results_to_report = ([listing for listing in listings if listing.id in new_results])
+          results_to_report = ([listing for listing in listings if (listing.id,listing.search_site_id) in new_results])
           # If we have any price changes, we want to add them to our results_to_report. We add them only when
           # we are showing new results only since they would already be included if we are sending all results.
           if (price_change_listings):
@@ -201,10 +201,14 @@ class searches:
         #We save the new results to the database.
         if len(new_results):
           row_entry_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-          for new_result_id in new_results:
+          for new_result_id,search_site_id in new_results:
             try:
-              current_app.logger.debug("New results %d for user: %s search: %s(%d)" % \
-                                       (new_result_id, user_rec.email, search_rec.search_item, search_rec.id))
+              current_app.logger.debug("%s new results %d for user: %s search: %s(%d)" % \
+                                       (search_site_id.site_name,
+                                        new_result_id,
+                                        user_rec.email,
+                                        search_rec.search_item,
+                                        search_rec.id))
               #Find the list record based on id so we can get the price.
               listing_rec = next(listing for listing in listings if new_result_id == listing.id)
               new_result = NormalizedSearchResults(row_entry_date=row_entry_date,
@@ -223,15 +227,15 @@ class searches:
               db.session.rollback()
 
         else:
-          current_app.logger.debug("No new results for user: %s search: %s(%d)" %\
-                                   (user_rec.email, search_rec.search_item, search_rec.id))
+          current_app.logger.debug("%s no new results for user: %s search: %s(%d)" %\
+                                   (search_site.site_name, user_rec.email, search_rec.search_item, search_rec.id))
 
         #Now figure out if old listings have been removed and clean up our table.
         deleted_search_results = prev_search_set.difference(current_search_set)
         if len(deleted_search_results):
           for deleted_results in deleted_search_results:
-            current_app.logger.debug("Search item: %d is no longer in the current results, removing from db" % \
-              (deleted_results))
+            current_app.logger.debug("%s search item: %d is no longer in the current results, removing from db" % \
+              (search_site.site_name, deleted_results))
             try:
               db.session.query(NormalizedSearchResults)\
                   .filter(NormalizedSearchResults.search_item_id == deleted_results)\

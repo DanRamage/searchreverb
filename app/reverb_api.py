@@ -12,8 +12,8 @@ class reverb_listing(listing):
       reverb_rec = kwargs['reverb_rec']
       site_id = kwargs['site_id']
 
-      self._id = reverb_rec['id']
-      self._price = reverb_rec['price']['amount']
+      self._id = int(reverb_rec['id'])
+      self._price = float(reverb_rec['price']['amount'])
       self._listing_description = reverb_rec['title']
       self._condition = reverb_rec['condition']['display_name']
       self._link = reverb_rec['_links']['web']['href']
