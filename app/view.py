@@ -540,6 +540,13 @@ class SearchResultsView(sqla.ModelView):
           return True
       return False
 
+class NormalizedSearchResultsView(sqla.ModelView):
+    column_list = ['row_entry_date', 'row_update_date', 'search_item.search_item', 'search_item_id', 'search_site.site_name', 'last_price']
+    def is_accessible(self):
+      if current_user.is_active and current_user.is_authenticated and current_user.has_role('admin'):
+          return True
+      return False
+
 class reverb_categories_rest(BaseAPI):
     def __init__(self):
         self._base_url = "https://api.reverb.com/api/categories"
