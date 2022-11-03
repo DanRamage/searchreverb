@@ -91,11 +91,11 @@ class guitarcenter_api:
                         except ValueError:
                             pass
 
-                #else:
-                #    logger.error("Unable to GET the url: {url} Code: {code}".format(url=self._base_used_url,
-                #                                                                    code=req.status_code))
             except Exception as e:
                 current_app.logger.exception(e)
+            self._driver.quit()
+            self._driver = None
+
     '''
     The guitar center search does not pass the actual monetary values, it uses the value attribute of the items
     in the <select> drop down. This function takes the min/max values from the search and gets the appropriate
