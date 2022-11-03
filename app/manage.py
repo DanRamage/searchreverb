@@ -24,6 +24,7 @@ from .reverb_models import SearchItem, SearchResults, SearchSite, NormalizedSear
 from .admin_models import Role, User, Roles_Users
 from .reverb_api import reverb_api
 from .gc_api import guitarcenter_api
+from .searches import searches
 app = Flask(__name__)
 db.app = app
 db.init_app(app)
@@ -273,15 +274,20 @@ def process_results(user_rec, search_rec, listings):
 
   return results_to_report
 
-@app.cli.command('run_searches')
+@app.cli.command('run_reverb_searches')
 @click.option('--params', nargs=1)
-def run_searches(params):
+def run_reverb_searches(params):
   start_time = time.time()
   try:
     email_results = int(params)
     init_logging(app)
 
     users = db.session.query(User).all()
+    #Get the ID for Guitar Center to attach to the results.
+    search_site_rec =  db.session.query(SearchSite)\
+        .filter(SearchSite.site_name == "Reverb")\
+        .one()
+
     search_obj = reverb_api(oauth_token=OAUTH_TOKEN, logger=current_app.logger)
 
     for user in users:
@@ -306,7 +312,7 @@ def run_searches(params):
           query_params['product_type'] = product_type.strip()
 
         current_app.logger.debug("Running query for Email: %s Query params: %s" % (user.email, query_params))
-        listings = search_obj.search_listings(**query_params)
+        listings = search_obj.search_listings(site_id=search_site_rec.id, **query_params)
         #Sort
         sorted_listings = sorted(listings, key=lambda item: float(item['price']['amount']))
         current_app.logger.debug("Sorted list of: %d results" % (len(sorted_listings)))
@@ -588,3 +594,18 @@ def output_normalized_results(app, search_results, user, email_results):
             current_app.logger.exception(e)
 
     return
+
+
+@app.cli.command('run_searches')
+@click.option('--params', nargs=1)
+def run_searches(params):
+  start_time = time.time()
+  try:
+    email_results = int(params)
+    init_logging(app)
+
+    search_obj = searches()
+    search_obj.do_searches(email_results)
+  except Exception as e:
+    current_app.logger.exception(e)
+  return

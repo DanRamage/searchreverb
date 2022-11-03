@@ -36,16 +36,22 @@
                 </div>
             </div>
             </br>
+            % for site_key in search_results:
             <div class="row">
-              % for result in search_results:
-                <table class="table table-striped table-bordered">
+                <div class="col-sm-12">
+                    <h3>Site: ${site_key}</h3>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <table class="table table-striped table-bordered">
                     <tr>
                         <th>Item</th>
                         <th>Condition</th>
                         <th>Price</th>
                         <th>Link</th>
                     </tr>
-                    % for page_ndx,listing in enumerate(result):
+                    % for listing in search_results[site_key]:
                       <tr>
                         <td>
                           ${str(listing.listing_description)}
@@ -62,8 +68,9 @@
                       </tr>
                     % endfor
                 </table>
-              % endfor
+                </div>
             </div>
+            % endfor
         </div>
     </body>
 </html>
