@@ -90,7 +90,7 @@ def build_flask_admin(app, login_manager):
   admin.add_view(UserModelView(User, db.session))
   admin.add_view(SearchItemView(SearchItem, db.session,name='Current Search Items'))
   admin.add_view(ItemSearchPageView(name='Add Reverb Search Item', endpoint='reverbitemsearch'))
-  admin.add_view(NormalizedSearchResultsView(SearchResults, db.session, name='Current Search Item Results', endpoint='reverbitemsearchresults'))
+  admin.add_view(NormalizedSearchResultsView(NormalizedSearchResults, db.session, name='Current Search Item Results', endpoint='normalizeditemsearchresults'))
   return admin
 
 def build_url_rules(app):
