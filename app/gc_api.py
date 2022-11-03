@@ -93,8 +93,6 @@ class guitarcenter_api:
 
             except Exception as e:
                 current_app.logger.exception(e)
-            self._driver.quit()
-            self._driver = None
 
     '''
     The guitar center search does not pass the actual monetary values, it uses the value attribute of the items
@@ -138,6 +136,9 @@ class guitarcenter_api:
                 current_app.logger.debug("Query has: {rec_cnt} results.".format(rec_cnt=len(listings)))
             except Exception as e:
                 current_app.logger.exception(e)
+            self._driver.quit()
+            self._driver = None
+
         return(listings)
 
 def main():
