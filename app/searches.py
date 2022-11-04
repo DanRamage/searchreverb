@@ -41,23 +41,22 @@ class searches:
             email_results = send_emails
 
             users = db.session.query(User).all()
-            # Get the ID for Guitar Center to attach to the results.
+            #Get all the sites we're going to search.
             search_site_recs = db.session.query(SearchSite).all()
 
             self._search_results = {}
+            #Loop each user, querying their searches.
             for user in users:
                 search_recs = db.session.query(SearchItem) \
                     .filter(SearchItem.user_id == user.id) \
                     .all()
 
-                # Build the slots for the search items categorized by the site searched.
                 for search_rec in search_recs:
                     search_results = []
                     result = search_result(search_rec)
                     for site_rec in search_site_recs:
                         query_start_time = time.time()
                         current_app.logger.info("Running {site_name} queries.".format(site_name=site_rec.site_name))
-
                         if site_rec.site_name == "Guitar Center":
                             listings = self.gc_search(user, search_rec, site_rec.id)
                         elif site_rec.site_name == "Reverb":
@@ -65,16 +64,14 @@ class searches:
                         current_app.logger.info("Finished {site_name} queries in {time} seconds"\
                                                 .format(site_name=site_rec.site_name,
                                                         time=time.time()-query_start_time))
+                        #If we get any results, process them. We add new results to the DB, trim
+                        #out records that are no longer listed.
                         if len(listings):
                             results_to_report = self.process_normalized_results(user, search_rec, listings, site_rec)
-                            # I may at some point have all the search results put into one file, so for now
-                            # pass the results_to_report as a list.
                             if len(results_to_report):
                                 result.add_search_site_results(site_rec.site_name, results_to_report)
                                 search_results.append(result)
-                            # if len(results_to_report):
-                            #  output_results(current_app, [results_to_report], user, search_rec, email_results)
-
+                    #Save the results to an HTML file, then email them to the user.
                     if len(search_results):
                         self.output_normalized_results(search_results, user, email_results)
 
