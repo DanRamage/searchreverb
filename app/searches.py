@@ -235,7 +235,8 @@ class searches:
               (search_site.site_name, deleted_results[0]))
             try:
               db.session.query(NormalizedSearchResults)\
-                  .filter(NormalizedSearchResults.search_item_id == deleted_results)\
+                  .filter(NormalizedSearchResults.search_item_id == deleted_results[0]) \
+                  .filter(NormalizedSearchResults.search_site_id == deleted_results[1])\
                   .delete()
               db.session.commit()
             except Exception as e:
