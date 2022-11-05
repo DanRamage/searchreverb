@@ -298,7 +298,7 @@ class searches:
                       db.session.commit()
               except Exception as e:
                 db.session.rollback()
-                current_app.logger.error("Error attempting to update the last_email_date for search item: %d" % (search_rec.id))
+                current_app.logger.error("Error attempting to update the last_email_date for search item: %d" % (result.search_rec.id))
                 current_app.logger.exception(e)
 
         return
