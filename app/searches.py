@@ -232,7 +232,7 @@ class searches:
         if len(deleted_search_results):
           for deleted_results in deleted_search_results:
             current_app.logger.debug("%s search item: %d is no longer in the current results, removing from db" % \
-              (search_site.site_name, deleted_results))
+              (search_site.site_name, deleted_results[0]))
             try:
               db.session.query(NormalizedSearchResults)\
                   .filter(NormalizedSearchResults.search_item_id == deleted_results)\
@@ -292,8 +292,9 @@ class searches:
             else:
               #If we succeeded in sending the email, let's update the last_email_date.
               try:
-                search_rec.last_email_date = run_time.strftime('%Y-%m-%dT%H:%M:%S')
-                db.session.commit()
+                  for result in search_results:
+                      result.search_rec.last_email_date = run_time.strftime('%Y-%m-%dT%H:%M:%S')
+                      db.session.commit()
               except Exception as e:
                 db.session.rollback()
                 current_app.logger.error("Error attempting to update the last_email_date for search item: %d" % (search_rec.id))
