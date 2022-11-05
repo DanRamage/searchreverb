@@ -47,12 +47,12 @@ class searches:
             self._search_results = {}
             #Loop each user, querying their searches.
             for user in users:
+                search_results = []
                 search_recs = db.session.query(SearchItem) \
                     .filter(SearchItem.user_id == user.id) \
                     .all()
 
                 for search_rec in search_recs:
-                    search_results = []
                     result = search_result(search_rec)
                     for site_rec in search_site_recs:
                         query_start_time = time.time()
