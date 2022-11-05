@@ -27,6 +27,7 @@ else:
 OAUTH_TOKEN=''
 
 EMAIL_TEMPLATE='output_templates/email_report.mako'
+EMAIL_TEMPLATE_NORMALIZED='output_templates/normalized_email_report.mako'
 EMAIL_HOST=''
 EMAIL_USER=''
 EMAIL_PWD=''
