@@ -71,9 +71,9 @@ class searches:
                             if len(results_to_report):
                                 result.add_search_site_results(site_rec.site_name, results_to_report)
                                 search_results.append(result)
-                    #Save the results to an HTML file, then email them to the user.
-                    if len(search_results):
-                        self.output_normalized_results(search_results, user, email_results)
+                #Save the results to an HTML file, then email them to the user.
+                if len(search_results):
+                    self.output_normalized_results(search_results, user, email_results)
 
         except Exception as e:
             current_app.logger.exception(e)
