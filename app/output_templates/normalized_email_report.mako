@@ -60,7 +60,7 @@
                           ${str(listing.condition)}
                         </td>
                         <td>
-                          ${listing.price}
+                          ${"%.2f" % (listing.price)}
                         </td>
                         <td>
                           <a href="${listing.link}">Link</a>
