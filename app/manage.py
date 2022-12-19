@@ -331,7 +331,6 @@ def run_reverb_searches(params):
     current_app.logger.exception(e)
 
   db.session.close()
-
   current_app.logger.debug("Finished run_searches in %f seconds" % (time.time()-start_time))
 
   return
