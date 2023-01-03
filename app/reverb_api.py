@@ -38,6 +38,8 @@ class reverb_listings(listings):
                 except Exception:
                     pass
 
+            self._listings.sort(key=lambda item: item.price)
+
 
 class reverb_base:
     def __init__(self, url, oauth_token, logger):
