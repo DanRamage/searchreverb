@@ -1,0 +1,46 @@
+stages:
+  - test
+  - deploy
+
+test3.9:
+  stage: test
+  image: python:3.9
+  # For the coverage badge... see: https://docs.gitlab.com/ee/ci/yaml/index.html#coverage
+  coverage: '/^TOTAL .* (\d+)%$/'
+  before_script:
+    - export PATH="/root/.local/bin:$PATH"
+    - curl -sSL https://install.python-poetry.org | python3 -
+    - poetry config virtualenvs.create  false
+    - poetry install
+  script:
+    - coverage run -m pytest --junitxml=report.xml
+    - coverage report
+    - coverage xml -o coverage/cobertura-coverage.xml
+  artifacts:
+    when: always
+    reports:
+      # See https://gitlab.visiostack.com/help/ci/unit_test_reports#python-example
+      junit: report.xml
+      # See https://docs.gitlab.com/ee/user/project/merge_requests/test_coverage_visualization.html#python-example
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+
+
+formatting:
+  stage: test
+  image: python:3.9
+  before_script:
+    - pip install pre-commit
+  script:
+    - pre-commit run --all-files
+
+deploy:
+  stage: deploy
+  only:
+    - master
+  tags:
+    - shell
+  script:
+    - vs plugin build
+    - vs plugin push latest
