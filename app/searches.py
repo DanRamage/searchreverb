@@ -60,6 +60,7 @@ class searches:
 
                 for search_rec in search_recs:
                     result = search_result(search_rec)
+
                     for site_rec in search_site_recs:
                         query_start_time = time.time()
                         current_app.logger.info(
@@ -87,7 +88,8 @@ class searches:
                                 result.add_search_site_results(
                                     site_rec.site_name, results_to_report
                                 )
-                                search_results.append(result)
+                    if len(result.search_site_results):
+                        search_results.append(result)
                 # Save the results to an HTML file, then email them to the user.
                 if len(search_results):
                     self.output_normalized_results(search_results, user, email_results)
@@ -352,7 +354,8 @@ class searches:
                     )
                     out_file = os.path.join(
                         current_app.root_path,
-                        "%s/%s.html" % (RESULTS_TEMP_DIRECTORY, filename),
+                        f"{RESULTS_TEMP_DIRECTORY}",
+                        f"{filename}.html",
                     )
                     with open(out_file, "w") as file_obj:
                         current_app.logger.debug("Saving results file: %s" % (out_file))
