@@ -25,19 +25,30 @@ from smtp_utils import smtpClass
 from .admin_models import Role, Roles_Users, User
 from .gc_api import guitarcenter_api
 from .reverb_api import reverb_api
-from .reverb_models import (NormalizedSearchResults, SearchItem, SearchResults,
-                            SearchSite)
+from .reverb_models import (
+    NormalizedSearchResults,
+    SearchItem,
+    SearchResults,
+    SearchSite,
+)
 from .searches import searches
 
 sys.path.append("../commonfiles/python")
 
+
 app = Flask(__name__)
+# Create in-memory database
+app.config["DATABASE_FILE"] = os.path.join(app.root_path, DATABASE_FILE)
+SQLALCHEMY_DATABASE_URI = "sqlite:///" + app.config["DATABASE_FILE"]
+app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
+app.config["SQLALCHEMY_ECHO"] = SQLALCHEMY_ECHO
+
 db.app = app
 db.init_app(app)
 # Create in-memory database
-app.config["DATABASE_FILE"] = DATABASE_FILE
-app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
-app.config["SQLALCHEMY_ECHO"] = SQLALCHEMY_ECHO
+# app.config["DATABASE_FILE"] = DATABASE_FILE
+# app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
+# app.config["SQLALCHEMY_ECHO"] = SQLALCHEMY_ECHO
 
 
 def init_logging(app):
@@ -229,7 +240,6 @@ def process_results(user_rec, search_rec, listings):
                             price_change_listings.append(listing)
                             # Update the database record with the new current price.
                             try:
-
                                 prev_search_result.row_update_date = row_entry_date
                                 prev_search_result.last_price = float(
                                     listing["price"]["amount"]
@@ -524,7 +534,6 @@ def process_normalized_results(user_rec, search_rec, listings):
                             price_change_listings.append(listing)
                             # Update the database record with the new current price.
                             try:
-
                                 prev_search_result.row_update_date = row_entry_date
                                 prev_search_result.last_price = float(listing.price)
                                 db.session.commit()

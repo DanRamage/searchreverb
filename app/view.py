@@ -5,12 +5,19 @@ from datetime import datetime
 import flask_admin as admin
 import flask_login as login
 import requests
-from flask import (current_app, has_app_context, redirect, render_template,
-                   request, url_for)
+from flask import (
+    current_app,
+    has_app_context,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask.views import MethodView, View
 from flask_admin import BaseView, expose, helpers
 from flask_admin.contrib import sqla
 from flask_security import current_user
+
 # from admin_models import User
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -127,13 +134,11 @@ class AddSearchItem(MethodView):
         search_item = request.form["search_item"]
         try:
             max_price = request.form["max_price"]
-        except ValueError as e:
-            e
+        except ValueError:
             max_price = None
         try:
             min_price = float(request.form["min_price"])
-        except ValueError as e:
-            e
+        except ValueError:
             min_price = None
         # category = request.form['category']
         full_category = request.form["full_category"]
@@ -190,7 +195,6 @@ class LoginForm(form.Form):
     # submit = SubmitField('Sign In')
 
     def validate_login(self, field):
-
         field
         user = self.get_user()
 
@@ -388,9 +392,21 @@ class UserModelView(sqla.ModelView):
                     "first_name",
                     "last_name",
                     "active",
+                    "city",
+                    "state",
+                    "zipcode",
                 ]
             else:
-                return ["last_login_date", "login", "email", "first_name", "last_name"]
+                return [
+                    "last_login_date",
+                    "login",
+                    "email",
+                    "first_name",
+                    "last_name",
+                    "city",
+                    "state",
+                    "zipcode",
+                ]
 
     @property
     def _form_columns(self):
@@ -404,21 +420,16 @@ class UserModelView(sqla.ModelView):
     def form_columns(self):
         if current_user is not None:
             if not has_app_context() or not current_user.has_role("admin"):
-                return ["email", "first_name", "last_name"]
+                return ["email", "first_name", "last_name", "zipcode", "city", "state"]
 
     def is_accessible(self):
         if (
             current_user.is_active
             and current_user.is_authenticated
-            and current_user.has_role("admin")
+            and (current_user.has_role("admin") or current_user.has_role("search_user"))
         ):
             return True
         return False
-        """
-        if current_user.is_authenticated:
-          return True
-        return False
-        """
 
     def get_query(self):
         if current_user.is_active and current_user.is_authenticated:
@@ -712,6 +723,7 @@ class NormalizedSearchResultsView(sqla.ModelView):
 
 class reverb_categories_rest(BaseAPI):
     def __init__(self):
+        super().__init__()
         self._base_url = "https://api.reverb.com/api/categories"
         self._headers = {
             "Authorization": "Bearer %s" % (OAUTH_TOKEN),
@@ -721,6 +733,7 @@ class reverb_categories_rest(BaseAPI):
         }
 
     def get(self):
+        req = None
         try:
             req = requests.get(self._base_url, headers=self._headers)
         except Exception as e:
@@ -732,6 +745,7 @@ class reverb_categories_rest(BaseAPI):
 
 class reverb_listings_rest(BaseAPI):
     def __init__(self):
+        super().__init__()
         self._base_url = "https://api.reverb.com/api/listings/all"
         self._headers = {
             "Authorization": "Bearer %s" % (OAUTH_TOKEN),
@@ -741,7 +755,6 @@ class reverb_listings_rest(BaseAPI):
         }
 
     def get(self):
-
         payload = {}
         for key in request.args:
             payload[key] = request.args[key]
