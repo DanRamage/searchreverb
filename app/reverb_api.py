@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import datetime
 from urllib.parse import urlparse
@@ -12,14 +13,17 @@ class reverb_listing(listing):
         try:
             reverb_rec = kwargs["reverb_rec"]
             site_id = kwargs["site_id"]
-
             self._id = int(reverb_rec["id"])
             self._price = float(reverb_rec["price"]["amount"])
             self._listing_description = reverb_rec["title"]
             self._condition = reverb_rec["condition"]["display_name"]
             self._link = reverb_rec["_links"]["web"]["href"]
             self._currency = reverb_rec["price"]["currency"]
+            self._region = ""
+            self._locality = ""
+            self._country_code = ""
             self._search_site_id = site_id
+            self._local_pickup_only = False
 
         except Exception as e:
             raise e
@@ -27,13 +31,39 @@ class reverb_listing(listing):
 
 class reverb_listings(listings):
     def parse(self, **kwargs):
+        logger = logging.getLogger()
         listings = kwargs.get("listings", None)
         site_id = kwargs.get("site_id", -1)
-
+        get_location = kwargs.get("get_location", False)
         if listings:
             for rec in listings:
                 try:
                     reverb_rec = reverb_listing(site_id=site_id, reverb_rec=rec)
+                    # If we are limiting the results based on a search radius, we'll need
+                    # to query the link in the result to get the actual item listing so we can then
+                    # get the city,state,country info.
+                    if get_location:
+                        try:
+                            listing_url = rec["_links"]["self"]["href"]
+                            site_listing = requests.get(listing_url)
+                            if site_listing.status_code == 200:
+                                json_listing = site_listing.json()
+                                reverb_rec.region = json_listing["location"]["region"]
+                                reverb_rec.locality = json_listing["location"][
+                                    "locality"
+                                ]
+                                reverb_rec.country_code = json_listing["location"][
+                                    "country_code"
+                                ]
+                                reverb_rec.local_pickup_only = json_listing[
+                                    "local_pickup_only"
+                                ]
+                            else:
+                                logger.error(
+                                    f"Error querying the item listing: {listing_url}"
+                                )
+                        except Exception as e:
+                            logger.exception(e)
                     self._listings.append(reverb_rec)
                 except Exception:
                     pass
@@ -76,7 +106,7 @@ class reverb_api(reverb_base):
         # This is the number of results we will limit ourselves to.
         self._results_limit = results_limit
 
-    def search_listings(self, site_id, **kwargs):
+    def search_listings(self, site_id, get_location, **kwargs):
         start_search = time.time()
         listings = []
         try:
@@ -135,7 +165,9 @@ class reverb_api(reverb_base):
         )
 
         normalized_listings = reverb_listings()
-        normalized_listings.parse(listings=listings, site_id=site_id)
+        normalized_listings.parse(
+            listings=listings, site_id=site_id, get_location=get_location
+        )
 
         return normalized_listings
 
