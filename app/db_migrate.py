@@ -24,6 +24,9 @@ class Search_User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     row_entry_date = db.Column(db.String(32))
     email = db.Column(db.String(255), unique=True)
+    zipcode = db.Column(db.String(10))
+    city = db.Column(db.String(255))
+    state = db.Column(db.String(255))
 
 
 class SearchItem(db.Model):
@@ -39,7 +42,7 @@ class SearchItem(db.Model):
     item_state = db.Column(db.String())
     category = db.Column(db.String())
     show_new_results_only = db.Column(db.Boolean)
-
+    filter_radius = db.Column(db.Integer)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     user = db.relationship("User", backref="user_search_item")
 
@@ -108,6 +111,14 @@ class User(db.Model, UserMixin):
     last_login_date = db.Column(db.String(32))
     first_name = db.Column(db.String(100))
     last_name = db.Column(db.String(100))
+
+    zipcode = db.Column(db.String(10))
+    city = db.Column(db.String(255))
+    state = db.Column(db.String(255))
+
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+
     active = db.Column(db.Boolean())
     login = db.Column(db.String(80), unique=True)
     email = db.Column(db.String(120), unique=True)

@@ -2,9 +2,9 @@ stages:
   - test
   - deploy
 
-test3.9:
+test3.11:
   stage: test
-  image: python:3.9
+  image: python:3.11
   # For the coverage badge... see: https://docs.gitlab.com/ee/ci/yaml/index.html#coverage
   coverage: '/^TOTAL .* (\d+)%$/'
   before_script:
@@ -29,7 +29,7 @@ test3.9:
 
 formatting:
   stage: test
-  image: python:3.9
+  image: python:3.11
   before_script:
     - pip install pre-commit
   script:
