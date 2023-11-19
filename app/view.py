@@ -134,11 +134,13 @@ class AddSearchItem(MethodView):
         search_item = request.form["search_item"]
         try:
             max_price = request.form["max_price"]
-        except ValueError:
+        except ValueError as e:
+            e
             max_price = None
         try:
             min_price = float(request.form["min_price"])
-        except ValueError:
+        except ValueError as e:
+            e
             min_price = None
         # category = request.form['category']
         full_category = request.form["full_category"]
@@ -195,6 +197,7 @@ class LoginForm(form.Form):
     # submit = SubmitField('Sign In')
 
     def validate_login(self, field):
+
         field
         user = self.get_user()
 
@@ -430,6 +433,11 @@ class UserModelView(sqla.ModelView):
         ):
             return True
         return False
+        """
+        if current_user.is_authenticated:
+          return True
+        return False
+        """
 
     def get_query(self):
         if current_user.is_active and current_user.is_authenticated:
@@ -723,7 +731,6 @@ class NormalizedSearchResultsView(sqla.ModelView):
 
 class reverb_categories_rest(BaseAPI):
     def __init__(self):
-        super().__init__()
         self._base_url = "https://api.reverb.com/api/categories"
         self._headers = {
             "Authorization": "Bearer %s" % (OAUTH_TOKEN),
@@ -733,7 +740,6 @@ class reverb_categories_rest(BaseAPI):
         }
 
     def get(self):
-        req = None
         try:
             req = requests.get(self._base_url, headers=self._headers)
         except Exception as e:
@@ -745,7 +751,6 @@ class reverb_categories_rest(BaseAPI):
 
 class reverb_listings_rest(BaseAPI):
     def __init__(self):
-        super().__init__()
         self._base_url = "https://api.reverb.com/api/listings/all"
         self._headers = {
             "Authorization": "Bearer %s" % (OAUTH_TOKEN),
@@ -755,6 +760,7 @@ class reverb_listings_rest(BaseAPI):
         }
 
     def get(self):
+
         payload = {}
         for key in request.args:
             payload[key] = request.args[key]

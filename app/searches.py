@@ -2,24 +2,25 @@ import os
 import time
 from datetime import datetime
 
-import pyproj
-import requests
 from flask import current_app
 from mako import exceptions as makoExceptions
 from mako.template import Template
-from shapely.geometry import Point
-from shapely.ops import transform
 from sqlalchemy.exc import IntegrityError
 
 from app import db
 from config import *
-from config import BING_MAP_API_KEY
 from smtp_utils import smtpClass
+import requests
 
 from .admin_models import User
 from .gc_api import guitarcenter_api
 from .reverb_api import reverb_api
 from .reverb_models import NormalizedSearchResults, SearchItem, SearchSite
+
+from shapely.geometry import Point
+from config import BING_MAP_API_KEY
+import pyproj
+from shapely.ops import transform
 
 
 def reproject_func(in_proj, out_proj):
@@ -100,12 +101,7 @@ class searches:
                                 filtered_listings = self.distance_filter(
                                     listings, user, search_rec.filter_radius
                                 )
-                                current_app.logger.debug(
-                                    f"Filtered listings from: {len(listings)} to "
-                                    f"{len(filtered_listings)}"
-                                )
-                                listings = filtered_listings
-
+                                filtered_listings
                             results_to_report = self.process_normalized_results(
                                 user, search_rec, listings, site_rec
                             )
@@ -136,8 +132,7 @@ class searches:
         if region is not None:
             url_template += f"&admin_district={region}"
         zipcode = kwargs.get("zipcode", None)
-        if zipcode is not None:
-            url_template += f"&postalCode={zipcode}"
+        zipcode
         try:
             point = None
             req = requests.get(url_template)
@@ -154,45 +149,14 @@ class searches:
         return point
 
     def distance_filter(self, listings, user_rec, filter_radius):
-        filtered_listings = []
-        # Let's check the user_rec to see if we have a lat/lon for the zip, if not,
-        # let's get that and save it.
-        if user_rec.latitude is None or user_rec.longitude is None:
-            user_loc_point = self.bing_geo_query(
-                BING_MAP_API_KEY, zipcode=user_rec.zipcode
-            )
-            user_rec.longitude = user_loc_point.x
-            user_rec.latitude = user_loc_point.y
-            try:
-                db.session.commit()
-            except Exception as e:
-                current_app.logger.exception(e)
-        else:
-            user_loc_point = Point(user_rec.longitude, user_rec.latitude)
         for listing in listings:
-            # Transform to 3857.
-            user_point = transform(self._reproj_func, user_loc_point)
-            allowable_radius = filter_radius * MILES_TO_METERS
             if listing.region is not None and listing.locality is not None:
                 listing_point = self.bing_geo_query(
                     BING_MAP_API_KEY, region=listing.region, locality=listing.locality
                 )
-                # Transform to 3857.
                 data_pt = transform(self._reproj_func, listing_point)
-                item_distance = user_point.distance(data_pt)
-                if item_distance <= allowable_radius:
-                    current_app.logger.debug(
-                        f"Listing: {listing.listing_description} Loc: {listing.locality},{listing.region} "
-                        f"within radius:{allowable_radius/MILES_TO_METERS} {item_distance/MILES_TO_METERS}"
-                    )
-                    filtered_listings.append(listing)
-                else:
-                    current_app.logger.debug(
-                        f"Listing: {listing.listing_description} Loc: {listing.locality},{listing.region} "
-                        f"outside radius:{allowable_radius/MILES_TO_METERS} {item_distance/MILES_TO_METERS}"
-                    )
-
-        return filtered_listings
+                data_pt
+        return
 
     def reverb_search(self, user, search_rec, site_id):
         try:
