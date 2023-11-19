@@ -25,8 +25,12 @@ from smtp_utils import smtpClass
 from .admin_models import Role, Roles_Users, User
 from .gc_api import guitarcenter_api
 from .reverb_api import reverb_api
-from .reverb_models import (NormalizedSearchResults, SearchItem, SearchResults,
-                            SearchSite)
+from .reverb_models import (
+    NormalizedSearchResults,
+    SearchItem,
+    SearchResults,
+    SearchSite,
+)
 from .searches import searches
 
 sys.path.append("../commonfiles/python")

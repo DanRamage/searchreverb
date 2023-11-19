@@ -5,12 +5,19 @@ from datetime import datetime
 import flask_admin as admin
 import flask_login as login
 import requests
-from flask import (current_app, has_app_context, redirect, render_template,
-                   request, url_for)
+from flask import (
+    current_app,
+    has_app_context,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask.views import MethodView, View
 from flask_admin import BaseView, expose, helpers
 from flask_admin.contrib import sqla
 from flask_security import current_user
+
 # from admin_models import User
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -388,9 +395,21 @@ class UserModelView(sqla.ModelView):
                     "first_name",
                     "last_name",
                     "active",
+                    "city",
+                    "state",
+                    "zipcode",
                 ]
             else:
-                return ["last_login_date", "login", "email", "first_name", "last_name"]
+                return [
+                    "last_login_date",
+                    "login",
+                    "email",
+                    "first_name",
+                    "last_name",
+                    "city",
+                    "state",
+                    "zipcode",
+                ]
 
     @property
     def _form_columns(self):
@@ -404,13 +423,13 @@ class UserModelView(sqla.ModelView):
     def form_columns(self):
         if current_user is not None:
             if not has_app_context() or not current_user.has_role("admin"):
-                return ["email", "first_name", "last_name"]
+                return ["email", "first_name", "last_name", "zipcode", "city", "state"]
 
     def is_accessible(self):
         if (
             current_user.is_active
             and current_user.is_authenticated
-            and current_user.has_role("admin")
+            and (current_user.has_role("admin") or current_user.has_role("search_user"))
         ):
             return True
         return False

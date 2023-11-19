@@ -38,6 +38,19 @@ class gc_listing(listing):
                 )
             except Exception as e:
                 raise e
+            try:
+                # Try and get the city/state.
+                store_location = str(
+                    product.find("div", class_="storeName")
+                    .findChildren("a", class_="storeDisplayPop")[0]
+                    .contents[-1]
+                )
+                self._locality, self._region = store_location.split(",")
+                self._locality = self._locality.strip()
+                self._region = self._region.strip()
+                self._country_code = "US"
+            except Exception as e:
+                e
 
 
 class gc_listings(listings):

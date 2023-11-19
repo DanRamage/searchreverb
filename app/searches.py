@@ -10,11 +10,21 @@ from sqlalchemy.exc import IntegrityError
 from app import db
 from config import *
 from smtp_utils import smtpClass
+import requests
 
 from .admin_models import User
 from .gc_api import guitarcenter_api
 from .reverb_api import reverb_api
 from .reverb_models import NormalizedSearchResults, SearchItem, SearchSite
+
+from shapely.geometry import Point
+from config import BING_MAP_API_KEY
+import pyproj
+from shapely.ops import transform
+
+
+def reproject_func(in_proj, out_proj):
+    return pyproj.Transformer.from_crs(in_proj, out_proj, always_xy=True).transform
 
 
 class search_result:
@@ -38,6 +48,7 @@ class searches:
     def __init__(self):
         self._listings = []
         self._search_results = {}
+        self._reproj_func = reproject_func("EPSG:4326", "EPSG:3857")
 
     def do_searches(self, send_emails):
         start_time = time.time()
@@ -81,6 +92,16 @@ class searches:
                         # If we get any results, process them. We add new results to the DB, trim
                         # out records that are no longer listed.
                         if len(listings):
+                            # If the user put in a zipcode, and the search query has a filter radius,
+                            # let's iterate the listing and get rid of results not in the radius.
+                            if (
+                                user.zipcode is not None
+                                and search_rec.filter_radius is not None
+                            ):
+                                filtered_listings = self.distance_filter(
+                                    listings, user, search_rec.filter_radius
+                                )
+                                filtered_listings
                             results_to_report = self.process_normalized_results(
                                 user, search_rec, listings, site_rec
                             )
@@ -101,6 +122,41 @@ class searches:
         current_app.logger.debug(
             "Finished run_searches in %f seconds" % (time.time() - start_time)
         )
+
+    def bing_geo_query(self, api_key, **kwargs):
+        url_template = f"http://dev.virtualearth.net/REST/v1/Locations?key={api_key}"
+        locality = kwargs.get("locality", None)
+        if locality is not None:
+            url_template += f"&locality={locality}"
+        region = kwargs.get("region", None)
+        if region is not None:
+            url_template += f"&admin_district={region}"
+        zipcode = kwargs.get("zipcode", None)
+        zipcode
+        try:
+            point = None
+            req = requests.get(url_template)
+            if req.status_code == 200:
+                json_req = req.json()
+                if "resourceSets" in json_req:
+                    if len(json_req["resourceSets"]):
+                        coords = json_req["resourceSets"][0]["resources"][0]["point"][
+                            "coordinates"
+                        ]
+                        point = Point(coords[1], coords[0])
+        except Exception as e:
+            raise e
+        return point
+
+    def distance_filter(self, listings, user_rec, filter_radius):
+        for listing in listings:
+            if listing.region is not None and listing.locality is not None:
+                listing_point = self.bing_geo_query(
+                    BING_MAP_API_KEY, region=listing.region, locality=listing.locality
+                )
+                data_pt = transform(self._reproj_func, listing_point)
+                data_pt
+        return
 
     def reverb_search(self, user, search_rec, site_id):
         try:
@@ -128,7 +184,13 @@ class searches:
                 "Running query for Email: %s Query params: %s"
                 % (user.email, search_rec.search_item)
             )
-            listings = search_obj.search_listings(site_id=site_id, **query_params)
+            get_location = True
+            if user.zipcode is not None and search_rec.filter_radius is not None:
+                get_location = True
+
+            listings = search_obj.search_listings(
+                site_id=site_id, get_location=get_location, **query_params
+            )
 
         except Exception as e:
             current_app.logger.exception(e)
@@ -152,6 +214,8 @@ class searches:
                 search_rec.max_price,
                 site_id,
             )
+            if user.zipcode is not None:
+                user.zipcode
         except Exception as e:
             current_app.logger.exception(e)
         current_app.logger.debug(
