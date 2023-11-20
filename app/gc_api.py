@@ -1,8 +1,12 @@
 import logging.config
+from re import sub
+from decimal import Decimal
 
 from bs4 import BeautifulSoup
 from flask import current_app
 from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.service import Service
 
 from .results import listing, listings
 
@@ -15,40 +19,50 @@ class gc_listing(listing):
         if product:
             try:
                 self._search_site_id = site_id
-                self._id = int(product.find("var", class_="hidden displayId").text)
-                self._listing_description = str(
-                    product.find("div", class_="productTitle").text
-                ).strip()
-                self._price = float(
-                    product.find("div", class_="priceContainer mainPrice")
-                    .findChildren("span", class_="productPrice")[0]
-                    .contents[-1]
-                )
-                self._condition = str(
-                    product.find("div", class_="productCondition").text
-                )
-                link_tag = (
-                    product.find("div", class_="product")
-                    .find("div", class_="thumb")
-                    .find("a", class_="quickView")
-                    .attrs["href"]
-                )
-                self._link = "{main_url}{href}".format(
-                    main_url="https://www.guitarcenter.com", href=link_tag
-                )
+                product_id = product.find("div", attrs={"data-product-sku-id": True})
+                if product_id is not None:
+                    # The product id now has "site" prepended, we assign it and then strip "site" out of it.
+                    self._id = product_id.attrs["data-product-sku-id"]
+                    if "site" in self._id:
+                        self._id = int(self._id.replace("site", ""))
+                    # self._id = int(product.find("var", class_="hidden displayId").text)
+                    self._listing_description = str(
+                        product.find("a", class_="product-name").text
+                    ).strip()
+                    price = (
+                        product.find("div", class_="price")
+                        .findChildren("span", class_="sale-price")[0]
+                        .contents[-1]
+                    )
+                    try:
+                        self._price = float(Decimal(sub(r"[^\d.]", "", price)))
+                    except (ValueError, Exception) as e:
+                        raise e
+                    link_tag = product.find("a", class_="product-name").attrs["href"]
+                    # There is no ID or Class that identifies the Condition element.
+                    # The only thing I see to use is the gc-font-light class, so since
+                    # it is used multiple times in <p> elements, we loop and see if
+                    # we find the "Condition" text.
+                    condition_search = product.findAll("p", class_="gc-font-light")
+                    for item in condition_search:
+                        if "Condition" in item.text:
+                            self._condition = str(item.text.replace("Condition: ", ""))
+                            break
+                    self._link = f"https://www.guitarcenter.com/{link_tag}"
+                else:
+                    raise Exception("No product found.")
             except Exception as e:
                 raise e
             try:
-                # Try and get the city/state.
-                store_location = str(
-                    product.find("div", class_="storeName")
-                    .findChildren("a", class_="storeDisplayPop")[0]
-                    .contents[-1]
-                )
-                self._locality, self._region = store_location.split(",")
-                self._locality = self._locality.strip()
-                self._region = self._region.strip()
-                self._country_code = "US"
+                if product is not None:
+                    # Try and get the city/state.
+                    store_location = str(
+                        product.find("span", class_="store-name-text").text
+                    )
+                    self._locality, self._region = store_location.split(",")
+                    self._locality = self._locality.strip()
+                    self._region = self._region.strip()
+                    self._country_code = "US"
             except Exception as e:
                 e
 
@@ -58,10 +72,10 @@ class gc_listings(listings):
         soup = kwargs.get("soup", None)
         site_id = kwargs.get("site_id", -1)
         if soup:
-            product_container = soup.find("div", {"id": "resultsContent"})
-            if product_container:
-                product_list = product_container.find("ol")
-                products = product_list.findChildren("li")
+            listing_container = soup.find("div", {"class": "listing-container"})
+            if listing_container:
+                product_grid = listing_container.find("div", {"class": "product-grid"})
+                products = product_grid.findChildren("section")
                 for product in products:
                     try:
                         listing = gc_listing(product=product, site_id=site_id)
@@ -95,15 +109,22 @@ class guitarcenter_api:
                 # The GC search provides a select for min and max prices, however they are fixed. Not only
                 # are they fixed, they don't send the actual value back, they use the drop list id. We need
                 # to do an initial query to get those values.
-                headOption = webdriver.FirefoxOptions()
-                headOption.headless = True
+                options = Options()
+                options.add_argument("--headless")
+                firefox_service = Service(self._geckodriver_binary)
                 self._driver = webdriver.Firefox(
-                    executable_path=self._geckodriver_binary, options=headOption
+                    options=options, service=firefox_service
                 )
+                # headOption = webdriver.FirefoxOptions()
+                # headOption.headless = True
+                # self._driver = webdriver.Firefox(
+                #    executable_path=self._geckodriver_binary, options=headOption
+                # )
                 self._driver.get(self._base_used_url)
-                soup = BeautifulSoup(self._driver.page_source, "html.parser")
-                # Find the element with the name minPrice_used.
-                min_ele = soup.find(attrs={"name": "minPrice_used"})
+                # soup = BeautifulSoup(self._driver.page_source, "html.parser")
+                # GC search page no longer uses these categories of prices. Now it appears
+                # to be a Min-Max parameter passed in the POST command.
+                """
                 price_children = min_ele.findChildren("option")
                 for price in price_children:
                     try:
@@ -121,7 +142,7 @@ class guitarcenter_api:
                             self._max_prices[text] = value
                         except ValueError:
                             pass
-
+                """
             except Exception as e:
                 current_app.logger.exception(e)
 
@@ -130,7 +151,7 @@ class guitarcenter_api:
     in the <select> drop down. This function takes the min/max values from the search and gets the appropriate
     IDs to use in the GET.
     """
-
+    """
     def get_price_ids(self, min_value, max_value):
         price_ids = []
         # No min value, we'll set it to 0.
@@ -143,6 +164,7 @@ class guitarcenter_api:
             if price >= min_value and price < max_value:
                 price_ids.append(str(self._min_prices[price]))
         return price_ids
+    """
 
     def search_used(
         self, search_term, min_value, max_value, site_id, filter_options=None
@@ -154,14 +176,10 @@ class guitarcenter_api:
                 # Parameters for the search term
                 # Ntt = search term
                 # Ns = ?
-                # N = The price Ids
+                # price=Min-Max
                 # Build price IDs
-                price_ids = self.get_price_ids(min_value, max_value)
-                url_template = "{url}?Ntt={search_term}&Ns=r&N={price_ids}".format(
-                    url=self._base_used_url,
-                    search_term=search_term,
-                    price_ids="+".join(price_ids),
-                )
+                # price_ids = self.get_price_ids(min_value, max_value)
+                url_template = f"{self._base_used_url}?Ntt={search_term}&Ns=r&price={min_value}-{max_value}"
                 self._driver.get(url_template)
                 soup = BeautifulSoup(self._driver.page_source, "html.parser")
                 listings = gc_listings()
