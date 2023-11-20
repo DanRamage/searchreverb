@@ -48,13 +48,21 @@ class reverb_listings(listings):
                             site_listing = requests.get(listing_url)
                             if site_listing.status_code == 200:
                                 json_listing = site_listing.json()
-                                reverb_rec.region = json_listing["location"]["region"]
-                                reverb_rec.locality = json_listing["location"][
-                                    "locality"
-                                ]
-                                reverb_rec.country_code = json_listing["location"][
-                                    "country_code"
-                                ]
+                                if "location" in json_listing:
+                                    if "region" in json_listing["location"]:
+                                        reverb_rec.region = json_listing["location"][
+                                            "region"
+                                        ]
+                                    else:
+                                        json_listing
+                                    if "locality" in json_listing["location"]:
+                                        reverb_rec.locality = json_listing["location"][
+                                            "locality"
+                                        ]
+                                    if "country_code" in json_listing["location"]:
+                                        reverb_rec.country_code = json_listing[
+                                            "location"
+                                        ]["country_code"]
                                 reverb_rec.local_pickup_only = json_listing[
                                     "local_pickup_only"
                                 ]

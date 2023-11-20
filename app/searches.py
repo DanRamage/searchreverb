@@ -324,14 +324,8 @@ class searches:
                 for new_result_id, search_site_id in new_results:
                     try:
                         current_app.logger.debug(
-                            "%s new results %d for user: %s search: %s(%d)"
-                            % (
-                                search_site.site_name,
-                                new_result_id,
-                                user_rec.email,
-                                search_rec.search_item,
-                                search_rec.id,
-                            )
+                            f"{search_site.site_name} new results {new_result_id} for user: {user_rec.email}"
+                            f" search: {search_rec.search_item}({search_rec.id})"
                         )
                         # Find the list record based on id so we can get the price.
                         listing_rec = next(
