@@ -21,6 +21,24 @@ from shapely.geometry import Point
 from config import BING_MAP_API_KEY
 import pyproj
 from shapely.ops import transform
+import importlib
+import pkgutil
+import plugins as search_plugins
+
+
+def iter_namespace(ns_pkg):
+    return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
+
+
+def load_plugins():
+    plugins = {}
+    for finder, name, ispkg in iter_namespace(search_plugins):
+        plugins[name] = {
+            "module": importlib.import_module(name),
+            "module_path": finder.path,
+        }
+        print(f"Imported: plugin {name}")
+    return plugins
 
 
 def reproject_func(in_proj, out_proj):
@@ -49,6 +67,10 @@ class searches:
         self._listings = []
         self._search_results = {}
         self._reproj_func = reproject_func("EPSG:4326", "EPSG:3857")
+
+    def get_plugins(self):
+        plugin_modules = load_plugins()
+        return plugin_modules
 
     def do_searches(self, send_emails):
         start_time = time.time()
@@ -79,36 +101,53 @@ class searches:
                                 site_name=site_rec.site_name
                             )
                         )
-                        if site_rec.site_name == "Guitar Center":
-                            listings = self.gc_search(user, search_rec, site_rec.id)
-                        elif site_rec.site_name == "Reverb":
-                            listings = self.reverb_search(user, search_rec, site_rec.id)
-                        current_app.logger.info(
-                            "Finished {site_name} queries in {time} seconds".format(
-                                site_name=site_rec.site_name,
-                                time=time.time() - query_start_time,
+                        plugin_modules = load_plugins()
+                        for plugin in plugin_modules:
+                            plugin_class = getattr(
+                                plugin_modules[plugin]["module"], "ItemSearch"
                             )
-                        )
-                        # If we get any results, process them. We add new results to the DB, trim
-                        # out records that are no longer listed.
-                        if len(listings):
-                            # If the user put in a zipcode, and the search query has a filter radius,
-                            # let's iterate the listing and get rid of results not in the radius.
-                            if (
-                                user.zipcode is not None
-                                and search_rec.filter_radius is not None
-                            ):
-                                filtered_listings = self.distance_filter(
-                                    listings, user, search_rec.filter_radius
-                                )
-                                filtered_listings
-                            results_to_report = self.process_normalized_results(
-                                user, search_rec, listings, site_rec
+                            plugin_obj = plugin_class(
+                                plugin_path=plugin_modules[plugin]["module_path"],
+                                logger=current_app.logger,
                             )
-                            if len(results_to_report):
-                                result.add_search_site_results(
-                                    site_rec.site_name, results_to_report
+                            current_app.logger.debug(
+                                f"Loading plugin: {plugin_obj.__name__}"
+                            )
+                            if plugin_obj.initialize(user, search_rec, site_rec.id):
+                                listings = plugin_obj.search()
+
+                                """
+                                if site_rec.site_name == "Guitar Center":
+                                    listings = self.gc_search(user, search_rec, site_rec.id)
+                                elif site_rec.site_name == "Reverb":
+                                    listings = self.reverb_search(user, search_rec, site_rec.id)
+                                """
+                                current_app.logger.info(
+                                    "Finished {site_name} queries in {time} seconds".format(
+                                        site_name=site_rec.site_name,
+                                        time=time.time() - query_start_time,
+                                    )
                                 )
+                                # If we get any results, process them. We add new results to the DB, trim
+                                # out records that are no longer listed.
+                                if len(listings):
+                                    # If the user put in a zipcode, and the search query has a filter radius,
+                                    # let's iterate the listing and get rid of results not in the radius.
+                                    if (
+                                        user.zipcode is not None
+                                        and search_rec.filter_radius is not None
+                                    ):
+                                        filtered_listings = self.distance_filter(
+                                            listings, user, search_rec.filter_radius
+                                        )
+                                        filtered_listings
+                                    results_to_report = self.process_normalized_results(
+                                        user, search_rec, listings, site_rec
+                                    )
+                                    if len(results_to_report):
+                                        result.add_search_site_results(
+                                            site_rec.site_name, results_to_report
+                                        )
                     if len(result.search_site_results):
                         search_results.append(result)
                 # Save the results to an HTML file, then email them to the user.

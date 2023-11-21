@@ -23,11 +23,12 @@ from config import *
 from smtp_utils import smtpClass
 
 from .admin_models import Role, Roles_Users, User
-from .gc_api import guitarcenter_api
-from .reverb_api import reverb_api
+
+# from .gc_api import guitarcenter_api
+# from .reverb_api import reverb_api
 from .reverb_models import (
     NormalizedSearchResults,
-    SearchItem,
+    # SearchItem,
     SearchResults,
     SearchSite,
 )
@@ -350,137 +351,6 @@ def process_results(user_rec, search_rec, listings):
         current_app.logger.exception(e)
 
     return results_to_report
-
-
-@app.cli.command("run_reverb_searches")
-@click.option("--params", nargs=1)
-def run_reverb_searches(params):
-    start_time = time.time()
-    try:
-        email_results = int(params)
-        init_logging(app)
-
-        users = db.session.query(User).all()
-        # Get the ID for Guitar Center to attach to the results.
-        search_site_rec = (
-            db.session.query(SearchSite).filter(SearchSite.site_name == "Reverb").one()
-        )
-
-        search_obj = reverb_api(oauth_token=OAUTH_TOKEN, logger=current_app.logger)
-
-        for user in users:
-            search_recs = (
-                db.session.query(SearchItem).filter(SearchItem.user_id == user.id).all()
-            )
-            search_results = []
-            for search_rec in search_recs:
-                query_params = {
-                    "query": search_rec.search_item,
-                    "price_max": search_rec.max_price,
-                }
-                if search_rec.min_price is not None:
-                    query_params["price_min"] = search_rec.min_price
-                if search_rec.item_region is not None:
-                    query_params["item_region"] = search_rec.item_region
-
-                # Split the category value apart in an attempt to better filter results.
-                # On Add Item screen we create the full category hierarchy using the category and subcategory slugs.
-                if search_rec.category is not None and len(search_rec.category):
-                    category, product_type = search_rec.category.split("/")
-                    query_params["category"] = category.strip()
-                    query_params["product_type"] = product_type.strip()
-
-                current_app.logger.debug(
-                    "Running query for Email: %s Query params: %s"
-                    % (user.email, query_params)
-                )
-                listings = search_obj.search_listings(
-                    site_id=search_site_rec.id, **query_params
-                )
-                # Sort
-                sorted_listings = sorted(
-                    listings, key=lambda item: float(item["price"]["amount"])
-                )
-                current_app.logger.debug(
-                    "Sorted list of: %d results" % (len(sorted_listings))
-                )
-
-                if len(sorted_listings):
-                    results_to_report = process_results(
-                        user, search_rec, sorted_listings
-                    )
-                    # I may at some point have all the search results put into one file, so for now
-                    # pass the results_to_report as a list.
-                    if len(results_to_report):
-                        search_results.append((search_rec, results_to_report))
-                    # if len(results_to_report):
-                    #  output_results(current_app, [results_to_report], user, search_rec, email_results)
-            if len(search_results):
-                output_results(current_app, search_results, user, email_results)
-    except Exception as e:
-        current_app.logger.exception(e)
-
-    db.session.close()
-    current_app.logger.debug(
-        "Finished run_searches in %f seconds" % (time.time() - start_time)
-    )
-
-    return
-
-
-@app.cli.command("run_gc_searches")
-@click.option("--params", nargs=1)
-def run_gc_searches(params):
-    start_time = time.time()
-    try:
-        email_results = int(params)
-        init_logging(app)
-
-        users = db.session.query(User).all()
-        search_obj = guitarcenter_api()
-
-        # Get the ID for Guitar Center to attach to the results.
-        search_site_rec = (
-            db.session.query(SearchSite)
-            .filter(SearchSite.site_name == "Guitar Center")
-            .one()
-        )
-
-        for user in users:
-            search_recs = (
-                db.session.query(SearchItem).filter(SearchItem.user_id == user.id).all()
-            )
-            search_results = []
-            for search_rec in search_recs:
-                current_app.logger.debug(
-                    f"Running query for Email: {user.email} Query params: {search_rec}"
-                )
-
-                listings = search_obj.search_used(
-                    search_rec.search_item,
-                    search_rec.min_price,
-                    search_rec.max_price,
-                    search_site_rec.id,
-                )
-                if len(listings):
-                    results_to_report = process_normalized_results(
-                        user, search_rec, listings
-                    )
-
-                    if len(results_to_report):
-                        search_results.append((search_rec, results_to_report))
-                if len(search_results):
-                    output_normalized_results(
-                        current_app, search_results, user, email_results
-                    )
-
-    except Exception as e:
-        app.logger.exception(e)
-
-    current_app.logger.debug(
-        f"run_gc_searches finished in {time.time() - start_time} seconds."
-    )
-    return
 
 
 def process_normalized_results(user_rec, search_rec, listings):
