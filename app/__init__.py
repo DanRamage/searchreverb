@@ -27,17 +27,18 @@ def create_app(config_file):
 
     install_secret_key(app)
 
+    # Create in-memory database
+    app.config["DATABASE_FILE"] = os.path.join(app.root_path, DATABASE_FILE)
+    SQLALCHEMY_DATABASE_URI = "sqlite:///" + app.config["DATABASE_FILE"]
+    app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
+    app.config["SQLALCHEMY_ECHO"] = SQLALCHEMY_ECHO
+
     # from app import db
     db.app = app
     db.init_app(app)
     user_datastore = SQLAlchemyUserDatastore(db, User, Role)
     security = Security(app, user_datastore)
     login_manager = flask_login.LoginManager()
-
-    # Create in-memory database
-    app.config["DATABASE_FILE"] = DATABASE_FILE
-    app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
-    app.config["SQLALCHEMY_ECHO"] = SQLALCHEMY_ECHO
 
     init_logging(app)
     admin = build_flask_admin(app, login_manager)
@@ -65,12 +66,18 @@ def create_app(config_file):
 def build_flask_admin(app, login_manager):
 
     from .admin_models import Role, User
-    from .reverb_models import (NormalizedSearchResults, SearchItem,
-                                SearchResults)
-    from .view import (AdminUserModelView, BasicUserModelView,
-                       ItemSearchPageView, MyAdminIndexView,
-                       NormalizedSearchResultsView, RolesView, SearchItemView,
-                       SearchResultsView, UserModelView)
+    from .reverb_models import NormalizedSearchResults, SearchItem, SearchResults
+    from .view import (
+        AdminUserModelView,
+        BasicUserModelView,
+        ItemSearchPageView,
+        MyAdminIndexView,
+        NormalizedSearchResultsView,
+        RolesView,
+        SearchItemView,
+        SearchResultsView,
+        UserModelView,
+    )
 
     login_manager.init_app(app)
     # Create admin
@@ -105,8 +112,12 @@ def build_flask_admin(app, login_manager):
 
 
 def build_url_rules(app):
-    from .view import (AddSearchItem, ItemSearchPage, reverb_categories_rest,
-                       reverb_search)
+    from .view import (
+        AddSearchItem,
+        ItemSearchPage,
+        reverb_categories_rest,
+        reverb_search,
+    )
 
     # Page rules
     app.add_url_rule("/searchpage", view_func=ItemSearchPage.as_view("searchpage"))
