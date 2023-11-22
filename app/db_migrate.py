@@ -139,3 +139,4 @@ class User(db.Model, UserMixin):
         primaryjoin=(Roles_Users.user_id == id),
         backref="user",
     )
+    fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)

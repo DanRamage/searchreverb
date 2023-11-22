@@ -557,6 +557,7 @@ class SearchItemView(sqla.ModelView):
         "max_price",
         "min_price",
         "show_new_results_only",
+        "filter_radius",
     ]
     can_create = False
 
