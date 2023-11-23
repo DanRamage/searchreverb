@@ -92,6 +92,7 @@ class searches:
                         # If we get any results, process them. We add new results to the DB, trim
                         # out records that are no longer listed.
                         if len(listings):
+                            results_to_report = []
                             # If the user put in a zipcode, and the search query has a filter radius,
                             # let's iterate the listing and get rid of results not in the radius.
                             if (
@@ -221,7 +222,7 @@ class searches:
                 query_params["item_region"] = search_rec.item_region
 
             # Split the category value apart in an attempt to better filter results.
-            # On Add Item screen we create the full category hierarchy using the category and subcategory slugs.
+            # On Add Item screen we'll create the full category hierarchy using the category and subcategory slugs.
             if search_rec.category is not None and len(search_rec.category):
                 category, product_type = search_rec.category.split("/")
                 query_params["category"] = category.strip()
