@@ -98,13 +98,22 @@ class searches:
                                 user.zipcode is not None
                                 and search_rec.filter_radius is not None
                             ):
-                                filtered_listings = self.distance_filter(
-                                    listings, user, search_rec.filter_radius
+                                # Convert the miles to meters for the comparison.
+                                filter_radius_meters = (
+                                    search_rec.filter_radius * MILES_TO_METERS
                                 )
-                                filtered_listings
-                            results_to_report = self.process_normalized_results(
-                                user, search_rec, listings, site_rec
-                            )
+                                filtered_listings = self.distance_filter(
+                                    listings, user, filter_radius_meters
+                                )
+                                if len(filtered_listings):
+                                    results_to_report = self.process_normalized_results(
+                                        user, search_rec, filtered_listings, site_rec
+                                    )
+                            else:
+                                results_to_report = self.process_normalized_results(
+                                    user, search_rec, listings, site_rec
+                                )
+
                             if len(results_to_report):
                                 result.add_search_site_results(
                                     site_rec.site_name, results_to_report
@@ -132,7 +141,8 @@ class searches:
         if region is not None:
             url_template += f"&admin_district={region}"
         zipcode = kwargs.get("zipcode", None)
-        zipcode
+        if zipcode is not None:
+            url_template += f"&postalCode={zipcode}"
         try:
             point = None
             req = requests.get(url_template)
@@ -140,23 +150,60 @@ class searches:
                 json_req = req.json()
                 if "resourceSets" in json_req:
                     if len(json_req["resourceSets"]):
-                        coords = json_req["resourceSets"][0]["resources"][0]["point"][
-                            "coordinates"
-                        ]
-                        point = Point(coords[1], coords[0])
+                        if json_req["resourceSets"][0]["estimatedTotal"] > 0:
+                            coords = json_req["resourceSets"][0]["resources"][0][
+                                "point"
+                            ]["coordinates"]
+                            point = Point(coords[1], coords[0])
         except Exception as e:
             raise e
         return point
 
     def distance_filter(self, listings, user_rec, filter_radius):
+        filtered_list = []
         for listing in listings:
-            if listing.region is not None and listing.locality is not None:
-                listing_point = self.bing_geo_query(
-                    BING_MAP_API_KEY, region=listing.region, locality=listing.locality
+            try:
+                if listing.region is not None and listing.locality is not None:
+                    # Based on the city and state, we get the lat/lon of the listing.
+                    listing_point = self.bing_geo_query(
+                        BING_MAP_API_KEY,
+                        region=listing.region,
+                        locality=listing.locality,
+                    )
+                    if listing_point is not None:
+                        data_pt = transform(self._reproj_func, listing_point)
+                        if user_rec.latitude is None and user_rec.longitude is None:
+                            # Look up the users zipcode to get lat/lon
+                            user_point = self.bing_geo_query(
+                                BING_MAP_API_KEY, zipcode=user_rec.zipcode
+                            )
+                            # Save the zipcode lon/lat to the database so we don't need
+                            # to keep looking it up.
+                            user_rec.longitude = user_point.x
+                            user_rec.latitude = user_point.y
+                            try:
+                                db.session.commit()
+                            except Exception as e:
+                                current_app.logger.exception(e)
+                        else:
+                            user_point = Point(user_rec.longitude, user_rec.latitude)
+
+                        user_pt = transform(self._reproj_func, user_point)
+                        distance = user_pt.distance(data_pt)
+                        if distance <= filter_radius:
+                            filtered_list.append(listing)
+                    else:
+                        current_app.logger.error(
+                            f"Could not geolocation listing: {listing.listing_description}"
+                            f"({listing.id}) Region: {listing.region} "
+                            f"Locality: {listing.locality}"
+                        )
+            except Exception as e:
+                current_app.logger.error(
+                    f"Error in distance filter for listing: {listing}"
                 )
-                data_pt = transform(self._reproj_func, listing_point)
-                data_pt
-        return
+                current_app.logger.exception(e)
+        return filtered_list
 
     def reverb_search(self, user, search_rec, site_id):
         try:

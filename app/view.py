@@ -142,6 +142,11 @@ class AddSearchItem(MethodView):
         except ValueError as e:
             e
             min_price = None
+        try:
+            filter_radius = int(float(request.form["filter_radius"]))
+        except ValueError as e:
+            e
+            filter_radius = None
         # category = request.form['category']
         full_category = request.form["full_category"]
         new_results_only = False
@@ -152,7 +157,8 @@ class AddSearchItem(MethodView):
             item_region = request.form["item_region"]
         row_entry_date = datetime.now()
         current_app.logger.debug(
-            "IP: %s AddSearchItem: Email: %s Search Item: %s Country Code: %s Max Price: %s Min Price: %s Category: %s"
+            "IP: %s AddSearchItem: Email: %s Search Item: %s Country Code: %s Max Price: %s Min Price: %s Category: %s "
+            "Radius: %s"
             % (
                 request.remote_addr,
                 current_user.email,
@@ -161,6 +167,7 @@ class AddSearchItem(MethodView):
                 max_price,
                 min_price,
                 full_category,
+                filter_radius,
             )
         )
         search_item = SearchItem(
@@ -172,6 +179,7 @@ class AddSearchItem(MethodView):
             min_price=min_price,
             user_id=current_user.id,
             show_new_results_only=new_results_only,
+            filter_radius=filter_radius,
         )
         try:
             db.session.add(search_item)
@@ -582,6 +590,7 @@ class SearchItemView(sqla.ModelView):
                     "max_price",
                     "min_price",
                     "show_new_results_only",
+                    "filter_radius",
                 ]
             else:
                 column_list = [
@@ -594,6 +603,7 @@ class SearchItemView(sqla.ModelView):
                     "max_price",
                     "min_price",
                     "show_new_results_only",
+                    "filter_radius",
                 ]
             return column_list
 
