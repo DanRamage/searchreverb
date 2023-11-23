@@ -20,7 +20,7 @@ class gc_listing(listing):
         if product:
             try:
                 self._search_site_id = site_id
-                self._locality, self._region = None
+                self._locality = self._region = None
                 self._country_code = "US"
 
                 product_id = product.find("div", attrs={"data-product-sku-id": True})
