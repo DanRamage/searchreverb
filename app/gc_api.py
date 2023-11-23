@@ -14,11 +14,15 @@ from .results import listing, listings
 class gc_listing(listing):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        logger = kwargs.get("logger", None)
         product = kwargs.get("product", None)
         site_id = kwargs.get("site_id")
         if product:
             try:
                 self._search_site_id = site_id
+                self._locality, self._region = None
+                self._country_code = "US"
+
                 product_id = product.find("div", attrs={"data-product-sku-id": True})
                 if product_id is not None:
                     # The product id now has "site" prepended, we assign it and then strip "site" out of it.
@@ -49,10 +53,23 @@ class gc_listing(listing):
                             self._condition = str(item.text.replace("Condition: ", ""))
                             break
                     self._link = f"https://www.guitarcenter.com/{link_tag}"
+
+                    # Try and get the city/state.
+                    try:
+                        store_location = str(
+                            product.find("span", class_="store-name-text").text
+                        )
+                        self._locality, self._region = store_location.split(",")
+                        self._locality = self._locality.strip()
+                        self._region = self._region.strip()
+                    except Exception as e:
+                        logger.exception(e)
+
                 else:
                     raise Exception("No product found.")
             except Exception as e:
                 raise e
+            """
             try:
                 if product is not None:
                     # Try and get the city/state.
@@ -65,6 +82,7 @@ class gc_listing(listing):
                     self._country_code = "US"
             except Exception as e:
                 e
+            """
 
 
 class gc_listings(listings):
@@ -78,7 +96,9 @@ class gc_listings(listings):
                 products = product_grid.findChildren("section")
                 for product in products:
                     try:
-                        listing = gc_listing(product=product, site_id=site_id)
+                        listing = gc_listing(
+                            product=product, site_id=site_id, logger=current_app.logger
+                        )
                         self._listings.append(listing)
                     except Exception as e:
                         current_app.logger.exception(e)
