@@ -168,7 +168,13 @@ class musicgoround_api:
                 # search = search term
                 # maxPrice=Max Price
                 # minPrice = Minimum Price
-                url_template = f"{self._base_used_url}?search={search_term}&minPrice={min_value}&maxPrice={max_value}"
+                min_value_str = ""
+                if min_value:
+                    min_value_str = f"&minPrice={min_value}"
+                max_value_str = ""
+                if max_value:
+                    max_value_str = f"&maxPrice={max_value}"
+                url_template = f"{self._base_used_url}?search={search_term}{min_value_str}{max_value_str}"
                 current_app.logger.debug(f"mgr url: {url_template}")
                 self._driver.get(url_template)
                 # We need to wait until
