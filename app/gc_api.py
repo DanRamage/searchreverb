@@ -141,34 +141,6 @@ class guitarcenter_api:
                 self._driver = webdriver.Firefox(
                     options=options, service=firefox_service
                 )
-                # headOption = webdriver.FirefoxOptions()
-                # headOption.headless = True
-                # self._driver = webdriver.Firefox(
-                #    executable_path=self._geckodriver_binary, options=headOption
-                # )
-                self._driver.get(self._base_used_url)
-                # soup = BeautifulSoup(self._driver.page_source, "html.parser")
-                # GC search page no longer uses these categories of prices. Now it appears
-                # to be a Min-Max parameter passed in the POST command.
-                """
-                price_children = min_ele.findChildren("option")
-                for price in price_children:
-                    try:
-                        text = int(price.text.replace("$", ""))
-                        value = int(price["value"])
-                        self._min_prices[text] = value
-                    except ValueError:
-                        pass
-                    min_ele = soup.find(attrs={"name": "max-priceRange"})
-                    price_children = min_ele.findChildren("option")
-                    for price in price_children:
-                        try:
-                            text = int(price.text.replace("$", ""))
-                            value = int(price["value"])
-                            self._max_prices[text] = value
-                        except ValueError:
-                            pass
-                """
             except Exception as e:
                 current_app.logger.exception(e)
 
@@ -206,6 +178,8 @@ class guitarcenter_api:
                 # Build price IDs
                 # price_ids = self.get_price_ids(min_value, max_value)
                 url_template = f"{self._base_used_url}?Ntt={search_term}&Ns=r&price={min_value}-{max_value}"
+                current_app.logger.debug(f"gc url: {url_template}")
+
                 self._driver.get(url_template)
                 soup = BeautifulSoup(self._driver.page_source, "html.parser")
                 listings = gc_listings()
