@@ -15,6 +15,7 @@ import requests
 from .admin_models import User
 from .gc_api import guitarcenter_api
 from .reverb_api import reverb_api
+from .musicgoround_api import musicgoround_api
 from .reverb_models import NormalizedSearchResults, SearchItem, SearchSite
 
 from shapely.geometry import Point
@@ -79,10 +80,14 @@ class searches:
                                 site_name=site_rec.site_name
                             )
                         )
+                        listings = []
+                        if site_rec.site_name == "Music Go Round":
+                            listings = self.mgr_search(user, search_rec, site_rec.id)
                         if site_rec.site_name == "Guitar Center":
                             listings = self.gc_search(user, search_rec, site_rec.id)
                         elif site_rec.site_name == "Reverb":
                             listings = self.reverb_search(user, search_rec, site_rec.id)
+
                         current_app.logger.info(
                             "Finished {site_name} queries in {time} seconds".format(
                                 site_name=site_rec.site_name,
@@ -268,6 +273,30 @@ class searches:
             current_app.logger.exception(e)
         current_app.logger.debug(
             f"gc_search finished in {time.time() - start_time} seconds."
+        )
+        return listings
+
+    def mgr_search(self, user, search_rec, site_id):
+        start_time = time.time()
+        try:
+            search_obj = musicgoround_api()
+
+            listings = []
+            # for search_rec in search_recs:
+            current_app.logger.debug(
+                f"Running query for Email: {user.email} Item: {search_rec.search_item}"
+            )
+
+            listings = search_obj.search_used(
+                search_rec.search_item,
+                search_rec.min_price,
+                search_rec.max_price,
+                site_id,
+            )
+        except Exception as e:
+            current_app.logger.exception(e)
+        current_app.logger.debug(
+            f"mgr_search finished in {time.time() - start_time} seconds."
         )
         return listings
 
