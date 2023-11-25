@@ -1,8 +1,9 @@
 import logging.config
 from re import sub
 from decimal import Decimal
+import requests
 
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
 from flask import current_app
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
@@ -14,15 +15,42 @@ from .results import listing, listings
 class gc_listing(listing):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        type = kwargs.get("response_type", "html")
+        if type == "html":
+            self.parse_html(**kwargs)
+        elif type == "json":
+            self.parse_json(**kwargs)
+
+    def parse_json(self, **kwargs):
+        product = kwargs.get("product", None)
+        site_id = kwargs.get("site_id")
+        self._search_site_id = site_id
+
+        if "displayName" in product:
+            self._listing_description = product["displayName"]
+        if "productId" in product:
+            prod_id = product["productId"]
+            self._id = int(prod_id.replace("site", ""))
+        if "price" in product:
+            price = product["price"]
+            try:
+                self._price = float(Decimal(sub(r"[^\d.]", "", price)))
+            except (ValueError, Exception) as e:
+                raise e
+        if "usedCondition" in product:
+            self._condition = product["usedCondition"]
+        if "linkUrl" in product:
+            self._link = f"https://www.guitarcenter.com/{product['linkUrl']}"
+        if "storeName" in product:
+            store_location = product["storeName"]
+            self._locality, self._region = store_location.split(",")
+            self._locality = self._locality.strip()
+            self._region = self._region.strip()
+
+    def parse_html(self, **kwargs):
         logger = kwargs.get("logger", None)
         product = kwargs.get("product", None)
         site_id = kwargs.get("site_id")
-
-        self._search_site_id = None
-        self._locality = self._region = None
-        self._country_code = ""
-        self._listing_description = None
-        self._link = None
         if product:
             try:
                 self._search_site_id = site_id
@@ -93,6 +121,32 @@ class gc_listing(listing):
 
 class gc_listings(listings):
     def parse(self, **kwargs):
+        parse_type = kwargs.get("type", None)
+        if parse_type == "json":
+            self.parse_json(**kwargs)
+        else:
+            self.parse_html(**kwargs)
+
+    def parse_json(self, **kwargs):
+        json_response = kwargs["json"]
+        site_id = kwargs.get("site_id", -1)
+        if "products" in json_response:
+            products = json_response["products"]
+            for product in products:
+                try:
+                    listing = gc_listing(
+                        product=product,
+                        site_id=site_id,
+                        logger=current_app.logger,
+                        response_type="json",
+                    )
+                    self._listings.append(listing)
+                except Exception as e:
+                    current_app.logger.exception(e)
+
+        return
+
+    def parse_html(self, **kwargs):
         soup = kwargs.get("soup", None)
         site_id = kwargs.get("site_id", -1)
         if soup:
@@ -103,7 +157,10 @@ class gc_listings(listings):
                 for product in products:
                     try:
                         listing = gc_listing(
-                            product=product, site_id=site_id, logger=current_app.logger
+                            product=product,
+                            site_id=site_id,
+                            logger=current_app.logger,
+                            response_type="html",
                         )
                         self._listings.append(listing)
                     except Exception as e:
@@ -117,7 +174,8 @@ logger = logging.getLogger()
 
 class guitarcenter_api:
     def __init__(self, **kwargs):
-        self._base_used_url = "https://www.guitarcenter.com/Used"
+        self._base_used_url = "https://www.guitarcenter.com/rest/model/ngp/rest/actor/SearchActor/RedesignSearch"
+        # self._base_used_url = "https://www.guitarcenter.com/Used"
         self._base_applied_filter_url = (
             "https://www.guitarcenter.com/ajax/storeLocation/findInStoreList.jsp"
         )
@@ -125,8 +183,6 @@ class guitarcenter_api:
         self._geckodriver_binary = "/usr/local/bin/geckodriver"
 
         self._driver = None
-        self._min_prices = {}
-        self._max_prices = {}
         return
 
     def initialize(self):
@@ -167,23 +223,59 @@ class guitarcenter_api:
     def search_used(
         self, search_term, min_value, max_value, site_id, filter_options=None
     ):
+        listings = []
+        # GC changed their search to now use an API that returns JSON.
+        """
+        #Latest params:
+        ?N=1076
+        &Ns=cD
+        &Ntt=soldano%20slo%2030
+        &Nao=0
+        &price=300-2700
+        &pageName=used-page
+        &recsPerPage=24
+        &postalCode=
+        &profileCountryCode=US
+        &profileCurrencyCode=USD
+        &SPA=true
+        """
+        try:
+            url_template = (
+                f"{self._base_used_url}?N=1076&Ns=cD&Ntt={search_term}&Nao=0"
+                f"&price={min_value}-{max_value}&pageName=used-page"
+                f"&recsPerPage=50&postalCode=&profileCountryCode=US&profileCurrencyCode=USD"
+                f"SPA=true"
+            )
+            current_app.logger.debug(f"gc url: {url_template}")
+            req = requests.get(url_template)
+            if req.status_code == 200:
+                listings = gc_listings()
+                listings.parse(json=req.json(), site_id=site_id, type="json")
+                current_app.logger.debug(
+                    "Query has: {rec_cnt} results.".format(rec_cnt=len(listings))
+                )
+            else:
+                current_app.logger.error(
+                    f"GC search_used failed. Status Code: {req.status_code}"
+                )
+        except Exception as e:
+            current_app.logger.exception(e)
+        """
         self.initialize()
         listings = []
         if self._driver:
             try:
-                # Parameters for the search term
-                # Ntt = search term
-                # Ns = ?
-                # price=Min-Max
-                # Build price IDs
-                # price_ids = self.get_price_ids(min_value, max_value)
-                url_template = f"{self._base_used_url}?Ntt={search_term}&Ns=r&price={min_value}-{max_value}"
+                url_template = (f"{self._base_used_url}?N=1076&Ns=cD&Ntt={search_term}&Nao=0"
+                                f"&price={min_value}-{max_value}&pageName=used-page"
+                                f"&recsPerPage=50&postalCode=&profileCountryCode=US&profileCurrencyCode=USD"
+                                f"SPA=true")
                 current_app.logger.debug(f"gc url: {url_template}")
+                req = requests.get(url_template)
 
                 self._driver.get(url_template)
                 soup = BeautifulSoup(self._driver.page_source, "html.parser")
                 listings = gc_listings()
-                listings.parse(soup=soup, site_id=site_id)
+                listings.parse(soup=soup, site_id=site_id, type="json")
                 current_app.logger.debug(
                     "Query has: {rec_cnt} results.".format(rec_cnt=len(listings))
                 )
@@ -191,7 +283,7 @@ class guitarcenter_api:
                 current_app.logger.exception(e)
             self._driver.quit()
             self._driver = None
-
+        """
         return listings
 
 

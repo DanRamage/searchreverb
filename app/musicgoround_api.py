@@ -20,15 +20,9 @@ class musicgoround_listing(listing):
         logger
         product = kwargs.get("product", None)
         site_id = kwargs.get("site_id")
+        site_id
         base_url = kwargs.get("base_url", "https://www.musicgoround.com")
 
-        self._search_site_id = site_id
-        self._locality = self._region = None
-        self._country_code = "US"
-        self._price = None
-        self._condition = None
-        self._listing_description = None
-        self._link = None
         if product:
             try:
                 # There doesn't seem to be a unique product id. It looks like their SKU/ID is

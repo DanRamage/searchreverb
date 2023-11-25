@@ -7,6 +7,8 @@ class listing:
         self._condition = None
         self._search_site_id = None
         self._currency = ""
+        self._region = None
+        self._locality = None
 
     @property
     def id(self):
@@ -35,6 +37,14 @@ class listing:
     @property
     def currency(self):
         return self._currency
+
+    @property
+    def region(self):
+        return self._region
+
+    @property
+    def locality(self):
+        return self._locality
 
 
 class listings:
