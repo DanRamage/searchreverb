@@ -17,12 +17,6 @@ class gc_listing(listing):
         logger = kwargs.get("logger", None)
         product = kwargs.get("product", None)
         site_id = kwargs.get("site_id")
-
-        self._search_site_id = None
-        self._locality = self._region = None
-        self._country_code = ""
-        self._listing_description = None
-        self._link = None
         if product:
             try:
                 self._search_site_id = site_id

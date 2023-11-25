@@ -50,13 +50,13 @@ class reverb_listings(listings):
                                 json_listing = site_listing.json()
                                 if "location" in json_listing:
                                     if "region" in json_listing["location"]:
-                                        reverb_rec.region = json_listing["location"][
+                                        reverb_rec._region = json_listing["location"][
                                             "region"
                                         ]
                                     else:
                                         json_listing
                                     if "locality" in json_listing["location"]:
-                                        reverb_rec.locality = json_listing["location"][
+                                        reverb_rec._locality = json_listing["location"][
                                             "locality"
                                         ]
                                     if "country_code" in json_listing["location"]:
