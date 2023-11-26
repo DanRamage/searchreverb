@@ -20,7 +20,8 @@ class musicgoround_listing(listing):
         logger
         product = kwargs.get("product", None)
         site_id = kwargs.get("site_id")
-        site_id
+        self._search_site_id = site_id
+
         base_url = kwargs.get("base_url", "https://www.musicgoround.com")
 
         if product:
