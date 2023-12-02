@@ -218,7 +218,9 @@ def run_searches(params):
         # CLI flag, if 1 will email results, if 0 will do searches but not email results.
         email_results = int(params[0])
         # If a list of user_names is provided, these will be the searches done.
-        user_names = params[1].split(",")
+        user_names = []
+        if len(params[1]):
+            user_names = params[1].split(",")
         init_logging(app)
 
         search_obj = searches()
