@@ -93,10 +93,10 @@ class searches:
                         listings = []
                         if site_rec.site_name == "Music Go Round":
                             listings = self.mgr_search(user, search_rec, site_rec.id)
-                        # if site_rec.site_name == "Guitar Center":
-                        #    listings = self.gc_search(user, search_rec, site_rec.id)
-                        # elif site_rec.site_name == "Reverb":
-                        #    listings = self.reverb_search(user, search_rec, site_rec.id)
+                        if site_rec.site_name == "Guitar Center":
+                            listings = self.gc_search(user, search_rec, site_rec.id)
+                        elif site_rec.site_name == "Reverb":
+                            listings = self.reverb_search(user, search_rec, site_rec.id)
 
                         current_app.logger.info(
                             "Finished {site_name} queries in {time} seconds".format(
