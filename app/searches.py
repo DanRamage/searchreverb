@@ -51,18 +51,28 @@ class searches:
         self._search_results = {}
         self._reproj_func = reproject_func("EPSG:4326", "EPSG:3857")
 
-    def do_searches(self, send_emails):
+    def do_searches(self, **kwargs):
         start_time = time.time()
         try:
-            email_results = send_emails
+            email_results = kwargs.get("send_emails", False)
+            specific_user_search = kwargs.get("specific_user_search", [])
 
             users = db.session.query(User).all()
+            # If we have a specfic user list, let's trim the users from the query above
+            # to only be those users.
+            if len(specific_user_search) == 0:
+                users_to_search = users
+            else:
+                users_to_search = [
+                    user for user in users if user.login in specific_user_search
+                ]
+
             # Get all the sites we're going to search.
             search_site_recs = db.session.query(SearchSite).all()
 
             self._search_results = {}
             # Loop each user, querying their searches.
-            for user in users:
+            for user in users_to_search:
                 search_results = []
                 search_recs = (
                     db.session.query(SearchItem)
@@ -83,10 +93,10 @@ class searches:
                         listings = []
                         if site_rec.site_name == "Music Go Round":
                             listings = self.mgr_search(user, search_rec, site_rec.id)
-                        if site_rec.site_name == "Guitar Center":
-                            listings = self.gc_search(user, search_rec, site_rec.id)
-                        elif site_rec.site_name == "Reverb":
-                            listings = self.reverb_search(user, search_rec, site_rec.id)
+                        # if site_rec.site_name == "Guitar Center":
+                        #    listings = self.gc_search(user, search_rec, site_rec.id)
+                        # elif site_rec.site_name == "Reverb":
+                        #    listings = self.reverb_search(user, search_rec, site_rec.id)
 
                         current_app.logger.info(
                             "Finished {site_name} queries in {time} seconds".format(
