@@ -1,7 +1,7 @@
 import logging.config
 from re import sub
 from decimal import Decimal
-
+import hashlib
 from bs4 import BeautifulSoup
 from flask import current_app
 from selenium import webdriver
@@ -47,8 +47,7 @@ class musicgoround_listing(listing):
                 if product_id is not None:
                     # The product id now has "site" prepended, we assign it and then strip "site" out of it.
                     id, sku = product_id.split("-")
-                    self._id = hash(sku)
-                    # self._id = int(product.find("var", class_="hidden displayId").text)
+                    self._id = int(hashlib.md5(bytes(sku, "utf-8")).hexdigest(), 16)
                     card_body = product.find("div", class_="card-body")
                     if card_body:
                         self._listing_description = str(
