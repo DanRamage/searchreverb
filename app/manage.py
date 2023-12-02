@@ -211,15 +211,20 @@ def update_fs_uniquifiers(params):
 
 
 @app.cli.command("run_searches")
-@click.option("--params", nargs=1)
+@click.option("--params", nargs=2)
 def run_searches(params):
     start_time = time.time()
     try:
-        email_results = int(params)
+        # CLI flag, if 1 will email results, if 0 will do searches but not email results.
+        email_results = int(params[0])
+        # If a list of user_names is provided, these will be the searches done.
+        user_names = params[1].split(",")
         init_logging(app)
 
         search_obj = searches()
-        search_obj.do_searches(email_results)
+        search_obj.do_searches(
+            send_emails=email_results, specific_user_search=user_names
+        )
     except Exception as e:
         current_app.logger.exception(e)
     current_app.logger.debug(
