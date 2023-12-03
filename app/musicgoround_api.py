@@ -47,7 +47,9 @@ class musicgoround_listing(listing):
                 if product_id is not None:
                     # The product id now has "site" prepended, we assign it and then strip "site" out of it.
                     id, sku = product_id.split("-")
-                    self._id = int(hashlib.md5(bytes(sku, "utf-8")).hexdigest(), 16)
+                    self._id = int.from_bytes(
+                        hashlib.md5(bytes(sku, "utf-8")).digest()[:4]
+                    )
                     card_body = product.find("div", class_="card-body")
                     if card_body:
                         self._listing_description = str(
